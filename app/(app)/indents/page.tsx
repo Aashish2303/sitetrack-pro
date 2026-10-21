@@ -1,4 +1,5 @@
 "use client";
+import {canAccessPath} from "@/lib/routing.mjs";
 import { useRouteFilter } from "@/lib/use-route-form";
 import { useRouteForm } from "@/lib/use-route-form";
 import { today } from "@/lib/date";
@@ -109,9 +110,9 @@ export default function IndentsPage() {
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
         <h1 style={{ fontSize: 20, fontWeight: 800 }}>Material Indents</h1>
-        <button className="btn btn-acc" onClick={() => setAdding(!adding)}>
+        {canAccessPath("/indents/new", profile?.role) && <button className="btn btn-acc" onClick={() => setAdding(!adding)}>
           <i className="ti ti-plus" /> New Indent
-        </button>
+        </button>}
       </div>
 
       {adding && (

@@ -2,6 +2,7 @@
 import { useRouteFilter } from "@/lib/use-route-form";
 import { usePathname, useParams, useRouter } from "next/navigation";
 import { useRouteForm } from "@/lib/use-route-form";
+import Link from "next/link";
 import {workingHours} from "@/lib/calculations.mjs";
 import { today } from "@/lib/date";
 import { useEffect, useMemo, useState } from "react";
@@ -34,6 +35,7 @@ export default function LabourPage() {
   const [filterProject, setFilterProject] = useRouteFilter("project", "all");
   const [filterDate, setFilterDate] = useRouteFilter("date", "");
   const [entries, setEntries] = useState<LabourEntry[]>([]);
+  const [loaded, setLoaded] = useState(false);
   const [categoriesByEntry, setCategoriesByEntry] = useState<Record<string, LabourCategoryView[]>>({});
   const [editingId, setEditingId] = useState<string | null>(null);
   const [adding, setAdding] = useRouteForm("/labour");
@@ -81,6 +83,7 @@ export default function LabourPage() {
     } else {
       setCategoriesByEntry({});
     }
+    setLoaded(true);
   }
 
   useEffect(() => {
@@ -149,8 +152,8 @@ export default function LabourPage() {
   useEffect(() => {
     if (!routePath.endsWith('/edit') || !routeParams.id) return;
     const entry = entries.find(e => e.id === routeParams.id);
-    if (entry && categoriesByEntry[entry.id]) startEdit(entry);
-  }, [routePath, routeParams.id, entries, categoriesByEntry]);
+    if (entry && loaded) startEdit(entry);
+  }, [routePath, routeParams.id, entries, categoriesByEntry, loaded]);
 
   async function save() {
     if (!form.project_id) return;
@@ -242,6 +245,12 @@ export default function LabourPage() {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Labour");
     XLSX.writeFile(wb, "labour-export.xlsx");
+  }
+
+  if (routePath.endsWith('/edit')) {
+    if (!loaded) return <div className="empty" role="status">Loading attendance…</div>;
+    if (!entries.some(e => e.id === routeParams.id)) return <div className="card empty"><p>Attendance entry not found or outside the selected filters.</p><Link className="btn btn-ghost" href="/labour">All labour entries</Link></div>;
+    if (editingId !== routeParams.id) return <div className="empty" role="status">Opening attendance editor…</div>;
   }
 
   return (

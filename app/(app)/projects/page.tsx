@@ -14,6 +14,7 @@ export default function ProjectsPage() {
   const routeParams = useParams<{id?:string}>(), routePath = usePathname(), router = useRouter();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [projects, setProjects] = useState<ProjectView[]>([]);
+  const [loaded, setLoaded] = useState(false);
   const [editing,setEditing]=useState<string|null>(null);
   const [adding, setAdding] = useRouteForm("/projects");
   const [form, setForm] = useState({ name: "", location: "", client_name: "", value: "", start_date: "", end_date: "", status: "Active" });
@@ -24,6 +25,7 @@ export default function ProjectsPage() {
   async function load() {
     const { data } = await supabase.from("projects_view").select("*").order("created_at", { ascending: false });
     setProjects((data as ProjectView[]) || []);
+    setLoaded(true);
   }
 
   useEffect(() => {
@@ -80,6 +82,12 @@ export default function ProjectsPage() {
   async function setStatus(id: string, status: string) {
     await supabase.from("projects").update({ status }).eq("id", id);
     load();
+  }
+
+  if (routePath.endsWith('/edit')) {
+    if (!loaded) return <div className="empty" role="status">Loading project…</div>;
+    if (!projects.some(p => p.id === routeParams.id)) return <div className="card empty"><p>Project not found or unavailable to your account.</p><Link className="btn btn-ghost" href="/projects">All projects</Link></div>;
+    if (editing !== routeParams.id) return <div className="empty" role="status">Opening project editor…</div>;
   }
 
   return (
