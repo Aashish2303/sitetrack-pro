@@ -35,3 +35,7 @@ Use Node 22 or 24, `npm ci`, `npm run typecheck`, `npm test`, `npm run build`. R
 ## Accounts
 
 Existing usernames and passwords are preserved. Do not commit passwords to source, docs, screenshots or logs. Login accepts username (mapped to the existing internal account email) or email. User provisioning and password reset use the existing Supabase administrator dashboard. End users cannot assign their own role.
+
+## Routing and legacy audit update
+
+Addressable create/edit forms, stock routes, query filters, protected deep links, refreshed-cookie redirects, server membership checks and error/loading pages are included. See `LEGACY-AUDIT.md` for observed legacy contracts and remaining parity gaps, and `SECURITY.md` for encryption details and unresolved production access controls. The short review alias must remain clearly identified as a review build.

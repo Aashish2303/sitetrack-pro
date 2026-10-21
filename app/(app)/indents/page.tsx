@@ -1,4 +1,6 @@
 "use client";
+import { useRouteFilter } from "@/lib/use-route-form";
+import { useRouteForm } from "@/lib/use-route-form";
 import { today } from "@/lib/date";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
@@ -25,11 +27,11 @@ export default function IndentsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [indents, setIndents] = useState<Indent[]>([]);
   const [itemCounts, setItemCounts] = useState<Record<string, number>>({});
-  const [adding, setAdding] = useState(false);
+  const [adding, setAdding] = useRouteForm("/indents");
   const [saving, setSaving] = useState(false);
 
-  const [filterProject, setFilterProject] = useState("all");
-  const [filterStatus, setFilterStatus] = useState("all");
+  const [filterProject, setFilterProject] = useRouteFilter("project", "all");
+  const [filterStatus, setFilterStatus] = useRouteFilter("status", "all");
 
   const [form, setForm] = useState({
     project_id: "",

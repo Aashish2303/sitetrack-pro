@@ -1,4 +1,6 @@
 "use client";
+import { useRouteFilter } from "@/lib/use-route-form";
+import { useRouteForm } from "@/lib/use-route-form";
 import ExportButtons from "@/components/ExportButtons";
 import { today } from "@/lib/date";
 import { useEffect, useMemo, useState } from "react";
@@ -14,10 +16,10 @@ export default function DwrPage() {
   const supabase = useMemo(() => createClient(), []);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [projects, setProjects] = useState<ProjectView[]>([]);
-  const [filterDate,setFilterDate]=useState("");
-  const [selected, setSelected] = useState<string>("all");
+  const [filterDate,setFilterDate]=useRouteFilter("date", "");
+  const [selected, setSelected] = useRouteFilter("project", "all");
   const [rows, setRows] = useState<DwrEntry[]>([]);
-  const [adding, setAdding] = useState(false);
+  const [adding, setAdding] = useRouteForm("/dwr");
   const [form, setForm] = useState({
     project_id: "",
     date: today(),

@@ -1,4 +1,6 @@
 "use client";
+import { useRouteFilter } from "@/lib/use-route-form";
+import { useRouteForm } from "@/lib/use-route-form";
 import { today } from "@/lib/date";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
@@ -19,10 +21,10 @@ export default function IssuesPage() {
   const supabase = useMemo(() => createClient(), []);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [projects, setProjects] = useState<ProjectView[]>([]);
-  const [filterProject, setFilterProject] = useState<string>("all");
-  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [filterProject, setFilterProject] = useRouteFilter("project", "all");
+  const [filterStatus, setFilterStatus] = useRouteFilter("status", "all");
   const [rows, setRows] = useState<Issue[]>([]);
-  const [adding, setAdding] = useState(false);
+  const [adding, setAdding] = useRouteForm("/issues");
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 

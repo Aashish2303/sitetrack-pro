@@ -3,6 +3,7 @@ import {useState} from 'react';
 import {useRouter} from 'next/navigation';
 import {IconArrowUpRight,IconArrowRight,IconLock,IconEye,IconEyeOff,IconCheck,IconBuildingSkyscraper,IconPackage,IconUsers,IconShieldCheck} from '@tabler/icons-react';
 import {createClient} from '@/lib/supabase/client';
+import {safeReturnTo} from '@/lib/routing.mjs';
 import CoreArtwork from '@/components/CoreArtwork';
 export default function Login(){
  const router=useRouter();
@@ -11,7 +12,8 @@ export default function Login(){
   e.preventDefault();setBusy(true);setError('');
   try{const sb=createClient();const {error}=await sb.auth.signInWithPassword({email:username.includes('@')?username.trim().toLowerCase():`${username.trim().toLowerCase()}@sitetrack.local`,password});
    if(error){setError('The username or password is incorrect. Please try again.');return}
-   router.replace('/today');router.refresh();
+   const target = safeReturnTo(new URLSearchParams(window.location.search).get('next'));
+   router.replace(target);router.refresh();
   }catch{setError('Unable to connect. Check your connection and try again.')}finally{setBusy(false)}
  }
  return <div className="core-login">

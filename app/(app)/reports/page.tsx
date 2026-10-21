@@ -1,4 +1,5 @@
 "use client";
+import { useRouteFilter } from "@/lib/use-route-form";
 import { useEffect, useMemo, useState } from "react";
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
@@ -33,9 +34,9 @@ export default function ReportsPage() {
   const supabase = useMemo(() => createClient(), []);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [projects, setProjects] = useState<ProjectView[]>([]);
-  const [selectedProject, setSelectedProject] = useState<string>("all");
-  const [fromDate, setFromDate] = useState<string>("");
-  const [toDate, setToDate] = useState<string>("");
+  const [selectedProject, setSelectedProject] = useRouteFilter("project", "all");
+  const [fromDate, setFromDate] = useRouteFilter("from", "");
+  const [toDate, setToDate] = useRouteFilter("to", "");
   const [loading, setLoading] = useState(false);
 
   const [workSummary, setWorkSummary] = useState<WorkSummary | null>(null);

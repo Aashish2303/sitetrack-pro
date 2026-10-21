@@ -1,4 +1,6 @@
 "use client";
+import { usePathname, useParams, useRouter } from "next/navigation";
+import { useRouteForm } from "@/lib/use-route-form";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -9,10 +11,11 @@ type DraftBoq = { item: string; unit: string; boq_qty: string; rate: string };
 
 export default function ProjectsPage() {
   const supabase = useMemo(() => createClient(), []);
+  const routeParams = useParams<{id?:string}>(), routePath = usePathname(), router = useRouter();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [projects, setProjects] = useState<ProjectView[]>([]);
   const [editing,setEditing]=useState<string|null>(null);
-  const [adding, setAdding] = useState(false);
+  const [adding, setAdding] = useRouteForm("/projects");
   const [form, setForm] = useState({ name: "", location: "", client_name: "", value: "", start_date: "", end_date: "", status: "Active" });
   const [draftBoq, setDraftBoq] = useState<DraftBoq[]>([]);
 
@@ -33,6 +36,15 @@ export default function ProjectsPage() {
       load();
     })();
   }, [supabase]);
+
+  useEffect(() => {
+    if (!routePath.endsWith('/edit') || !routeParams.id) return;
+    const p = projects.find(p => p.id === routeParams.id);
+    if (!p) return;
+    setEditing(p.id);
+    setForm({name:p.name,location:p.location||'',client_name:p.client_name||'',value:String(p.value||0),start_date:p.start_date||'',end_date:p.end_date||'',status:p.status});
+    setDraftBoq([]);
+  }, [projects, routeParams.id, routePath]);
 
   const finance = canSeeFinance(profile?.role);
 
@@ -129,7 +141,7 @@ export default function ProjectsPage() {
             <div style={{ background: "var(--s2)", borderRadius: 6, height: 8, overflow: "hidden" }}>
               <div style={{ width: `${p.progress_pct}%`, height: "100%", background: p.progress_pct >= 80 ? "var(--gr)" : p.progress_pct >= 50 ? "var(--yl)" : "var(--rd)" }} />
             </div>
-            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginTop:12}}><span style={{fontSize:11,color:'var(--t3)'}}>{p.progress_pct}% complete</span><button className="btn btn-ghost" onClick={()=>{setEditing(p.id);setForm({name:p.name,location:p.location||'',client_name:p.client_name||'',value:String(p.value||0),start_date:p.start_date||'',end_date:p.end_date||'',status:p.status});setDraftBoq([]);setAdding(true);window.scrollTo({top:0,behavior:'smooth'})}}>Edit project</button></div>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginTop:12}}><span style={{fontSize:11,color:'var(--t3)'}}>{p.progress_pct}% complete</span><button className="btn btn-ghost" onClick={()=>{setEditing(p.id);setForm({name:p.name,location:p.location||'',client_name:p.client_name||'',value:String(p.value||0),start_date:p.start_date||'',end_date:p.end_date||'',status:p.status});setDraftBoq([]);router.push(`/projects/${p.id}/edit`);window.scrollTo({top:0,behavior:'smooth'})}}>Edit project</button></div>
           </div>
         ))}
         {projects.length === 0 && <div style={{ color: "var(--t3)" }}>No projects yet — add your first one.</div>}

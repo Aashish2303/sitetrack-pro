@@ -1,4 +1,7 @@
 "use client";
+import { useRouteFilter } from "@/lib/use-route-form";
+import { usePathname, useParams, useRouter } from "next/navigation";
+import { useRouteForm } from "@/lib/use-route-form";
 import {workingHours} from "@/lib/calculations.mjs";
 import { today } from "@/lib/date";
 import { useEffect, useMemo, useState } from "react";
@@ -25,14 +28,15 @@ function nowHHMM() {
 
 export default function LabourPage() {
   const supabase = useMemo(() => createClient(), []);
+  const routeParams = useParams<{id?:string}>(), routePath = usePathname(), router = useRouter();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [projects, setProjects] = useState<ProjectView[]>([]);
-  const [filterProject, setFilterProject] = useState<string>("all");
-  const [filterDate, setFilterDate] = useState<string>("");
+  const [filterProject, setFilterProject] = useRouteFilter("project", "all");
+  const [filterDate, setFilterDate] = useRouteFilter("date", "");
   const [entries, setEntries] = useState<LabourEntry[]>([]);
   const [categoriesByEntry, setCategoriesByEntry] = useState<Record<string, LabourCategoryView[]>>({});
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [adding, setAdding] = useState(false);
+  const [adding, setAdding] = useRouteForm("/labour");
 
   const [form, setForm] = useState({
     project_id: "",
@@ -139,8 +143,14 @@ export default function LabourPage() {
         : [emptyCategoryRow()]
     );
     setEditingId(entry.id);
-    setAdding(true);
+    if (routePath !== `/labour/${entry.id}/edit`) router.push(`/labour/${entry.id}/edit`);
   }
+
+  useEffect(() => {
+    if (!routePath.endsWith('/edit') || !routeParams.id) return;
+    const entry = entries.find(e => e.id === routeParams.id);
+    if (entry && categoriesByEntry[entry.id]) startEdit(entry);
+  }, [routePath, routeParams.id, entries, categoriesByEntry]);
 
   async function save() {
     if (!form.project_id) return;

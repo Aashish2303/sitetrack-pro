@@ -1,4 +1,6 @@
 "use client";
+import { useRouteFilter } from "@/lib/use-route-form";
+import { useRouteForm } from "@/lib/use-route-form";
 import ExportButtons from "@/components/ExportButtons";
 import { today } from "@/lib/date";
 import { useEffect, useMemo, useState } from "react";
@@ -13,11 +15,11 @@ export default function DprPage() {
   const supabase = useMemo(() => createClient(), []);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [projects, setProjects] = useState<ProjectView[]>([]);
-  const [filterProject, setFilterProject] = useState<string>("all");
-  const [filterDate, setFilterDate] = useState<string>("");
+  const [filterProject, setFilterProject] = useRouteFilter("project", "all");
+  const [filterDate, setFilterDate] = useRouteFilter("date", "");
   const [rows, setRows] = useState<DprEntry[]>([]);
   const [boqItems, setBoqItems] = useState<BoqItemView[]>([]);
-  const [adding, setAdding] = useState(false);
+  const [adding, setAdding] = useRouteForm("/dpr");
   const [form, setForm] = useState({
     project_id: "",
     boq_item_id: "",

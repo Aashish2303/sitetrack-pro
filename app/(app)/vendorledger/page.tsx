@@ -1,4 +1,6 @@
 "use client";
+import { useRouteFilter } from "@/lib/use-route-form";
+import { useRouteForm } from "@/lib/use-route-form";
 import { today } from "@/lib/date";
 import { useEffect, useMemo, useState } from "react";
 import * as XLSX from "xlsx";
@@ -16,9 +18,9 @@ export default function VendorLedgerPage() {
   const supabase = useMemo(() => createClient(), []);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [projects, setProjects] = useState<ProjectView[]>([]);
-  const [selected, setSelected] = useState<string>("all");
+  const [selected, setSelected] = useRouteFilter("project", "all");
   const [rows, setRows] = useState<VendorLedgerEntry[]>([]);
-  const [adding, setAdding] = useState(false);
+  const [adding, setAdding] = useRouteForm("/vendorledger");
   const [form, setForm] = useState({
     project_id: "",
     vendor: "",

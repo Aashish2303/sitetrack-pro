@@ -1,4 +1,6 @@
 "use client";
+import { useRouteFilter } from "@/lib/use-route-form";
+import { useRouteForm } from "@/lib/use-route-form";
 import { useEffect, useMemo, useState } from "react";
 import * as XLSX from "xlsx";
 import { createClient } from "@/lib/supabase/client";
@@ -12,9 +14,9 @@ export default function VendorDbPage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [search, setSearch] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [categoryFilter, setCategoryFilter] = useRouteFilter("category", "all");
 
-  const [adding, setAdding] = useState(false);
+  const [adding, setAdding] = useRouteForm("/vendordb");
   const [form, setForm] = useState({
     vendor_name: "",
     company_name: "",

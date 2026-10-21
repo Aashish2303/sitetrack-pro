@@ -1,4 +1,6 @@
 "use client";
+import { useRouteFilter } from "@/lib/use-route-form";
+import { useRouteForm } from "@/lib/use-route-form";
 import { today } from "@/lib/date";
 import React, { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
@@ -9,12 +11,12 @@ export default function OrdersPage() {
   const supabase = useMemo(() => createClient(), []);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [projects, setProjects] = useState<ProjectView[]>([]);
-  const [selectedProject, setSelectedProject] = useState<string>("all");
+  const [selectedProject, setSelectedProject] = useRouteFilter("project", "all");
   const [orders, setOrders] = useState<MaterialOrderView[]>([]);
   const [deliveries, setDeliveries] = useState<Record<string, MaterialOrderDelivery[]>>({});
   const [expanded, setExpanded] = useState<string | null>(null);
 
-  const [adding, setAdding] = useState(false);
+  const [adding, setAdding] = useRouteForm("/orders");
   const [form, setForm] = useState({
     project_id: "",
     vendor: "",
