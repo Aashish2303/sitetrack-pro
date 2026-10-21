@@ -1,0 +1,7 @@
+"use client";
+type Cell=string|number|boolean|null|undefined;
+export default function ExportButtons({title,rows}:{title:string;rows:Record<string,Cell>[]}){
+ async function excel(){const XLSX=await import('xlsx');const ws=XLSX.utils.json_to_sheet(rows.map(row=>Object.fromEntries(Object.entries(row).map(([k,v])=>[k,typeof v==='string'&&/^[=+@\-\t\r]/.test(v)?"'"+v:v]))));ws['!cols']=Object.keys(rows[0]||{}).map(k=>({wch:Math.min(50,Math.max(k.length+2,18))}));const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Report');XLSX.writeFile(wb,title.replace(/\W+/g,'-')+'.xlsx')}
+ async function pdf(){const [{default:jsPDF},{default:autoTable}]=await Promise.all([import('jspdf'),import('jspdf-autotable')]);const doc=new jsPDF({orientation:'landscape'});doc.setFontSize(16);doc.text(title,14,17);doc.setFontSize(9);doc.text('Aashish Infra Projects | Exported '+new Date().toLocaleDateString('en-IN'),14,24);autoTable(doc,{head:[Object.keys(rows[0]||{})],body:rows.map(r=>Object.values(r).map(v=>v==null?'':String(v).replace(/₹/g,'INR '))),startY:30,styles:{fontSize:7,cellPadding:2.5},headStyles:{fillColor:[27,42,74]},margin:{horizontal:12},horizontalPageBreak:true});doc.save(title.replace(/\W+/g,'-')+'.pdf')}
+ return <><button className="btn btn-ghost" disabled={!rows.length} onClick={excel}>Export Excel</button><button className="btn btn-ghost" disabled={!rows.length} onClick={pdf}>Export PDF</button></>
+}

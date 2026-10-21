@@ -1,4 +1,5 @@
 "use client";
+import { today } from "@/lib/date";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { CATEGORY_OF_WORK } from "@/lib/roles";
@@ -27,7 +28,7 @@ export default function IssuesPage() {
 
   const [form, setForm] = useState({
     project_id: "",
-    date: new Date().toISOString().slice(0, 10),
+    date: today(),
     title: "",
     description: "",
     category: CATEGORY_OF_WORK[0],
@@ -35,6 +36,8 @@ export default function IssuesPage() {
     raised_by: "",
     assigned_to: "",
   });
+
+  useEffect(() => { const refresh = () => { loadRows(); }; window.addEventListener("st:refresh", refresh); return () => window.removeEventListener("st:refresh", refresh); });
 
   async function loadProjects() {
     const { data } = await supabase.from("projects_view").select("*").order("created_at", { ascending: false });

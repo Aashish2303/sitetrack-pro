@@ -50,7 +50,7 @@ export const CATEGORY_OF_WORK = [
   "Steel/Reinforcement", "Finishing", "Earthwork", "Other",
 ];
 
-export const UNITS = ["Cum", "Sqm", "Rmt", "MT", "Bag", "Nos", "LS", "Litre", "Kg", "mm", "inches", "feet", "sqft", "Rft", "Ton", "Set", "Pair"];
+export const UNITS = ["Cum", "Sqm", "Rmt", "MT", "Bag", "Nos", "LS", "Litre", "Kg", "mm", "inches", "feet", "sqft", "Rft", "Ton", "Set", "Pair", "Sft", "Cft", "angular"];
 
 export const SIZES = ['1"', '1.5"', '2"', '3"', '4"', '5"', '6"', "8mm", "10mm", "12mm", "16mm", "20mm", "25mm", "32mm", "M6-M16", "Custom"];
 

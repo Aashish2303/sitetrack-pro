@@ -1,4 +1,6 @@
 "use client";
+import {workingHours} from "@/lib/calculations.mjs";
+import { today } from "@/lib/date";
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { canSeeFinance, TRADES } from "@/lib/roles";
@@ -20,16 +22,6 @@ function nowHHMM() {
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
-function computeHours(inTime: string, outTime: string): number | null {
-  if (!inTime || !outTime) return null;
-  const [ih, im] = inTime.split(":").map(Number);
-  const [oh, om] = outTime.split(":").map(Number);
-  if ([ih, im, oh, om].some((n) => Number.isNaN(n))) return null;
-  let start = ih * 60 + im;
-  let end = oh * 60 + om;
-  if (end <= start) end += 24 * 60; // overnight wrap-around
-  return Math.round(((end - start) / 60) * 100) / 100;
-}
 
 export default function LabourPage() {
   const supabase = useMemo(() => createClient(), []);
@@ -44,7 +36,7 @@ export default function LabourPage() {
 
   const [form, setForm] = useState({
     project_id: "",
-    date: new Date().toISOString().slice(0, 10),
+    date: today(),
     subcontractor: "",
     site_incharge: "",
     shift: "Day" as "Day" | "Night",
@@ -53,6 +45,8 @@ export default function LabourPage() {
     remarks: "",
   });
   const [catRows, setCatRows] = useState<CategoryRow[]>([emptyCategoryRow()]);
+
+  useEffect(() => { const refresh = () => { loadEntries(); }; window.addEventListener("st:refresh", refresh); return () => window.removeEventListener("st:refresh", refresh); });
 
   async function loadProjects() {
     const { data } = await supabase.from("projects_view").select("*").order("created_at", { ascending: false });
@@ -108,7 +102,7 @@ export default function LabourPage() {
   function resetForm() {
     setForm({
       project_id: projects[0]?.id || "",
-      date: new Date().toISOString().slice(0, 10),
+      date: today(),
       subcontractor: "",
       site_incharge: "",
       shift: "Day",
@@ -150,7 +144,7 @@ export default function LabourPage() {
 
   async function save() {
     if (!form.project_id) return;
-    const hours = computeHours(form.in_time, form.out_time);
+    const hours = workingHours(form.in_time, form.out_time);
 
     const payload = {
       project_id: form.project_id,
@@ -165,28 +159,10 @@ export default function LabourPage() {
       created_by: profile?.id || null,
     };
 
-    let entryId = editingId;
-    if (editingId) {
-      await supabase.from("labour_entries").update(payload).eq("id", editingId);
-      await supabase.from("labour_categories").delete().eq("labour_entry_id", editingId);
-    } else {
-      const { data, error } = await supabase.from("labour_entries").insert(payload).select().single();
-      if (error || !data) return;
-      entryId = data.id;
-    }
-
-    const validRows = catRows.filter((r) => r.trade && (Number(r.male_count) || Number(r.female_count)));
-    if (validRows.length && entryId) {
-      const childRows = validRows.map((r) => ({
-        labour_entry_id: entryId,
-        trade: r.trade,
-        skill: r.skill,
-        male_count: Number(r.male_count || 0),
-        female_count: Number(r.female_count || 0),
-        wage: finance ? Number(r.wage || 0) : 0,
-      }));
-      await supabase.from("labour_categories").insert(childRows);
-    }
+    const validRows = catRows.filter(r => r.trade && (Number(r.male_count) > 0 || Number(r.female_count) > 0));
+    if (!validRows.length) return window.dispatchEvent(new CustomEvent('st:notice', {detail:{message:'Add at least one worker.',error:true}}));
+    const {error} = await supabase.rpc('save_labour', {p_id:editingId, p_header:payload, p_rows:validRows.map(r=>({...r,male_count:Number(r.male_count||0),female_count:Number(r.female_count||0),wage:finance?Number(r.wage||0):null}))});
+    if(error) throw error;
 
     resetForm();
     setAdding(false);
@@ -312,7 +288,7 @@ export default function LabourPage() {
               {Object.entries(byTrade).map(([trade, v]) => (
                 <tr key={trade}>
                   <td>{trade}</td>
-                  <td>{v.workers}</td>
+                  <td><div style={{display:"flex",gap:12,alignItems:"center"}}><div className="mini-bar"><span style={{width:`${100*v.workers/Math.max(totalWorkers,1)}%`}}/></div>{v.workers}</div></td>
                   {finance && <td>₹{v.cost.toLocaleString("en-IN")}</td>}
                 </tr>
               ))}
@@ -321,6 +297,7 @@ export default function LabourPage() {
         </div>
       )}
 
+      {finance && <div className="card" style={{padding:18,marginBottom:20}}><h3 style={{fontSize:14,fontWeight:600}}>Labour cost by subcontractor</h3>{Array.from(new Set(entries.map(e=>e.subcontractor||'Unassigned'))).map(name=>{const matching=entries.filter(e=>(e.subcontractor||'Unassigned')===name);const cost=matching.reduce((s,e)=>s+(categoriesByEntry[e.id]||[]).reduce((a,c)=>a+Number(c.row_cost||0),0),0);return <div key={name} style={{display:'flex',justifyContent:'space-between',padding:'10px 0',borderTop:'1px solid var(--br)'}}><span>{name}</span><strong>₹{cost.toLocaleString('en-IN')}</strong></div>})}</div>}
       {adding && (
         <div className="card fadeIn" style={{ padding: 18, marginBottom: 20 }}>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(160px,1fr))", gap: 10, marginBottom: 14 }}>
@@ -352,20 +329,20 @@ export default function LabourPage() {
             <div>
               <label style={{ fontSize: 11, color: "var(--t3)" }}>In Time</label>
               <div style={{ display: "flex", gap: 6 }}>
-                <input className="input" placeholder="HH:MM" value={form.in_time} onChange={(e) => setForm({ ...form, in_time: e.target.value })} />
+                <input className="input" type="time" placeholder="HH:MM" value={form.in_time} onChange={(e) => setForm({ ...form, in_time: e.target.value })} />
                 <button type="button" className="btn btn-ghost" onClick={() => setForm({ ...form, in_time: nowHHMM() })}>Now</button>
               </div>
             </div>
             <div>
               <label style={{ fontSize: 11, color: "var(--t3)" }}>Out Time</label>
               <div style={{ display: "flex", gap: 6 }}>
-                <input className="input" placeholder="HH:MM" value={form.out_time} onChange={(e) => setForm({ ...form, out_time: e.target.value })} />
+                <input className="input" type="time" placeholder="HH:MM" value={form.out_time} onChange={(e) => setForm({ ...form, out_time: e.target.value })} />
                 <button type="button" className="btn btn-ghost" onClick={() => setForm({ ...form, out_time: nowHHMM() })}>Now</button>
               </div>
             </div>
             <div>
               <label style={{ fontSize: 11, color: "var(--t3)" }}>Hours (auto)</label>
-              <input className="input" value={computeHours(form.in_time, form.out_time) ?? ""} disabled readOnly />
+              <input className="input" value={workingHours(form.in_time, form.out_time) ?? ""} disabled readOnly />
             </div>
           </div>
           <div style={{ marginBottom: 14 }}>
@@ -431,7 +408,7 @@ export default function LabourPage() {
                   <td>{workers}</td>
                   {finance && <td>₹{cost.toLocaleString("en-IN")}</td>}
                   <td>{e.site_incharge || "—"}</td>
-                  <td><button className="btn btn-ghost" style={{ fontSize: 12 }} onClick={() => startEdit(e)}>Edit</button></td>
+                  <td><button disabled={e.date!==today() && !["md","admin"].includes(profile?.role||"")} title={e.date!==today()?"Historical entries require management access":"Edit same-day attendance"} className="btn btn-ghost" style={{ fontSize: 12 }} onClick={() => startEdit(e)}>Edit</button></td>
                 </tr>
               );
             })}

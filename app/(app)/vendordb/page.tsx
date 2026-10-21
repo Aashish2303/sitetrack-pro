@@ -32,6 +32,8 @@ export default function VendorDbPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<Vendor>>({});
 
+  useEffect(() => { const refresh = () => { loadVendors(); }; window.addEventListener("st:refresh", refresh); return () => window.removeEventListener("st:refresh", refresh); });
+
   async function loadVendors() {
     try {
       const { data, error } = await supabase.from("vendors").select("*").order("vendor_name", { ascending: true });

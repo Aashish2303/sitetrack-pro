@@ -1,4 +1,5 @@
 "use client";
+import { today } from "@/lib/date";
 import React, { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { canSeeFinance, UNITS } from "@/lib/roles";
@@ -18,7 +19,7 @@ export default function OrdersPage() {
     project_id: "",
     vendor: "",
     material: "",
-    date: new Date().toISOString().slice(0, 10),
+    date: today(),
     po_number: "",
     ordered_qty: "",
     unit: UNITS[0],
@@ -26,9 +27,11 @@ export default function OrdersPage() {
     remarks: "",
   });
 
-  const [deliveryForm, setDeliveryForm] = useState({ date: new Date().toISOString().slice(0, 10), delivered_qty: "", dc_number: "" });
+  const [deliveryForm, setDeliveryForm] = useState({ date: today(), delivered_qty: "", dc_number: "" });
 
   const finance = canSeeFinance(profile?.role);
+
+  useEffect(() => { const refresh = () => { loadOrders(); }; window.addEventListener("st:refresh", refresh); return () => window.removeEventListener("st:refresh", refresh); });
 
   async function loadProjects() {
     const { data } = await supabase.from("projects_view").select("*").order("created_at", { ascending: false });
@@ -99,21 +102,22 @@ export default function OrdersPage() {
       return;
     }
     setExpanded(order.id);
-    setDeliveryForm({ date: new Date().toISOString().slice(0, 10), delivered_qty: "", dc_number: "" });
+    setDeliveryForm({ date: today(), delivered_qty: "", dc_number: "" });
     if (!deliveries[order.id]) loadDeliveries(order.id);
   }
 
   async function addDelivery(order: MaterialOrderView) {
     if (!deliveryForm.delivered_qty) return;
     if (order.pending_qty <= 0) return; // guard: no over-delivery
-    const qty = Math.min(Number(deliveryForm.delivered_qty), order.pending_qty);
+    const qty = Number(deliveryForm.delivered_qty);
+    if(qty<=0 || qty>order.pending_qty) return window.dispatchEvent(new CustomEvent('st:notice',{detail:{message:'Enter a positive quantity within the pending balance.',error:true}}));
     await supabase.from("material_order_deliveries").insert({
       order_id: order.id,
       date: deliveryForm.date,
       delivered_qty: qty,
       dc_number: deliveryForm.dc_number || null,
     });
-    setDeliveryForm({ date: new Date().toISOString().slice(0, 10), delivered_qty: "", dc_number: "" });
+    setDeliveryForm({ date: today(), delivered_qty: "", dc_number: "" });
     await loadDeliveries(order.id);
     await loadOrders();
   }
@@ -192,7 +196,7 @@ export default function OrdersPage() {
             <tr>
               <th>Project</th><th>Vendor</th><th>Material</th><th>PO No.</th>
               <th>Ordered Qty</th><th>Received Qty</th><th>Pending Qty</th>
-              <th>Billing Status</th><th>Pay Status</th>
+              <th>Received %</th><th>Billing Status</th><th>Pay Status</th>
               {finance && <th>Rate</th>}
               <th></th>
             </tr>
@@ -208,7 +212,7 @@ export default function OrdersPage() {
                   <td>{o.ordered_qty} {o.unit}</td>
                   <td>{o.received_qty} {o.unit}</td>
                   <td>{o.pending_qty} {o.unit}</td>
-                  <td>
+                  <td>{(100 * o.received_qty / o.ordered_qty).toFixed(1)}%</td><td>
                     <span className="badge" style={{ background: o.billing_status === "Complete" ? "rgba(16,185,129,0.15)" : "rgba(251,191,36,0.15)", color: o.billing_status === "Complete" ? "var(--gr)" : "var(--yl)" }}>
                       {o.billing_status}
                     </span>

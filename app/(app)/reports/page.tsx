@@ -46,6 +46,8 @@ export default function ReportsPage() {
 
   const finance = canSeeFinance(profile?.role);
 
+  useEffect(() => { const refresh = () => { loadAll(); }; window.addEventListener("st:refresh", refresh); return () => window.removeEventListener("st:refresh", refresh); });
+
   async function loadProjects() {
     const { data } = await supabase.from("projects_view").select("*").order("created_at", { ascending: false });
     setProjects((data as ProjectView[]) || []);

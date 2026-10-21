@@ -1,9 +1,4 @@
 "use client";
-import { createBrowserClient } from "@supabase/ssr";
-
-export function createClient() {
-  return createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-}
+import {createBrowserClient} from '@supabase/ssr';
+let client:ReturnType<typeof createBrowserClient>|undefined;
+export function createClient(){if(client)return client;client=createBrowserClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,{global:{fetch:async(input,init)=>{const res=await fetch(input,init);const url=String(input);const method=(init?.method||'GET').toUpperCase();if((url.includes('/rest/v1/')||url.includes('/storage/v1/'))&&!res.ok){let message='Could not complete this request.';try{const j=await res.clone().json();message=j.message||j.error||message}catch{}if(typeof window!=='undefined')window.dispatchEvent(new CustomEvent('st:notice',{detail:{message,error:true}}));if(!['GET','HEAD'].includes(method))throw new Error(message)}else if(res.ok&&['POST','PATCH','DELETE'].includes(method)&&url.includes('/rest/v1/')){if(typeof window!=='undefined')window.dispatchEvent(new CustomEvent('st:notice',{detail:{message:'Changes saved successfully.'}}))}return res}}});return client}

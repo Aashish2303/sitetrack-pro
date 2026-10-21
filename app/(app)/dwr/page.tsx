@@ -1,4 +1,6 @@
 "use client";
+import ExportButtons from "@/components/ExportButtons";
+import { today } from "@/lib/date";
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { CATEGORY_OF_WORK } from "@/lib/roles";
@@ -6,18 +8,19 @@ import type { DwrEntry, Profile, ProjectView, WorkStatus } from "@/lib/types";
 
 const WORK_STATUSES: WorkStatus[] = ["Completed", "Partial", "Delayed - Carry Forward", "Cancelled", "Not Started"];
 
-const CAN_ADD_ROLES = ["engineer", "qms", "admin"];
+const CAN_ADD_ROLES = ["engineer", "qms", "md", "admin"];
 
 export default function DwrPage() {
   const supabase = useMemo(() => createClient(), []);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [projects, setProjects] = useState<ProjectView[]>([]);
+  const [filterDate,setFilterDate]=useState("");
   const [selected, setSelected] = useState<string>("all");
   const [rows, setRows] = useState<DwrEntry[]>([]);
   const [adding, setAdding] = useState(false);
   const [form, setForm] = useState({
     project_id: "",
-    date: new Date().toISOString().slice(0, 10),
+    date: today(),
     description: "",
     location_block: "",
     quantity: "",
@@ -29,6 +32,8 @@ export default function DwrPage() {
     remarks: "",
   });
 
+  useEffect(() => { const refresh = () => { loadRows(); }; window.addEventListener("st:refresh", refresh); return () => window.removeEventListener("st:refresh", refresh); });
+
   async function loadProjects() {
     const { data } = await supabase.from("projects_view").select("*").order("created_at", { ascending: false });
     const list = (data as ProjectView[]) || [];
@@ -39,6 +44,7 @@ export default function DwrPage() {
   async function loadRows() {
     let q = supabase.from("dwr_entries").select("*").order("date", { ascending: false }).order("created_at", { ascending: false });
     if (selected !== "all") q = q.eq("project_id", selected);
+    if(filterDate) q=q.eq("date",filterDate);
     const { data } = await q;
     setRows((data as DwrEntry[]) || []);
   }
@@ -58,7 +64,7 @@ export default function DwrPage() {
   useEffect(() => {
     loadRows();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selected]);
+  }, [selected,filterDate]);
 
   const canAdd = !!profile && CAN_ADD_ROLES.includes(profile.role);
   const projectName = (id: string) => projects.find((p) => p.id === id)?.name || "—";
@@ -95,6 +101,8 @@ export default function DwrPage() {
             <option value="all">All projects</option>
             {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
+          <input aria-label="Filter daily work by date" className="input" type="date" style={{width:150}} value={filterDate} onChange={e=>setFilterDate(e.target.value)}/>
+          <ExportButtons title="Daily Work Report" rows={rows.map(r=>({Date:r.date,Project:projectName(r.project_id),Description:r.description,Location:r.location_block,Quantity:r.quantity,Category:r.category,Subcontractor:r.subcontractor,Engineer:r.engineer,'Site incharge':r.site_incharge,Status:r.work_status,'Carry forward':r.carry_forward?'Yes':'No',Remarks:r.remarks}))}/>
           {canAdd && (
             <button className="btn btn-acc" onClick={() => setAdding(!adding)}>
               <i className="ti ti-plus" /> Add Entry

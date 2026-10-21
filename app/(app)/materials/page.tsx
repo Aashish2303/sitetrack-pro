@@ -1,4 +1,5 @@
 "use client";
+import { today } from "@/lib/date";
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { UNITS } from "@/lib/roles";
@@ -23,12 +24,14 @@ export default function MaterialsPage() {
   const [txForm, setTxForm] = useState({
     project_id: "",
     material_id: "",
-    date: new Date().toISOString().slice(0, 10),
+    date: today(),
     type: "Inward" as TxType,
     quantity: "",
     reference: "",
     remarks: "",
   });
+
+  useEffect(() => { const refresh = () => { loadMaterials(); loadTransactions(); }; window.addEventListener("st:refresh", refresh); return () => window.removeEventListener("st:refresh", refresh); });
 
   async function loadMaterials() {
     const { data } = await supabase.from("materials").select("*").order("name", { ascending: true });
