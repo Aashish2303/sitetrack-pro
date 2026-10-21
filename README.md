@@ -16,6 +16,7 @@ npm run dev
 ```sh
 npm run typecheck
 npm test
+npm run test:database
 npm run build
 ```
 

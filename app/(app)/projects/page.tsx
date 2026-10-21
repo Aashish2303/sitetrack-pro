@@ -42,7 +42,7 @@ export default function ProjectsPage() {
         name: form.name,
         location: form.location,
         client_name: form.client_name,
-        value: Number(form.value || 0),
+        ...(finance ? {value:Number(form.value || 0)} : {}),
         start_date: form.start_date || null,
         end_date: form.end_date || null,
         status: form.status,
