@@ -1,8 +1,49 @@
 "use client";
 import {useState} from 'react';
 import {useRouter} from 'next/navigation';
-import {IconBuildingSkyscraper,IconArrowRight,IconLock,IconEye,IconEyeOff} from '@tabler/icons-react';
+import {IconArrowUpRight,IconArrowRight,IconLock,IconEye,IconEyeOff,IconCheck,IconBuildingSkyscraper,IconPackage,IconUsers,IconShieldCheck} from '@tabler/icons-react';
 import {createClient} from '@/lib/supabase/client';
-export default function Login(){const router=useRouter();const [username,setUsername]=useState(''),[password,setPassword]=useState(''),[show,setShow]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState('');
-async function login(e:React.FormEvent){e.preventDefault();setBusy(true);setError('');try{const sb=createClient();const {error}=await sb.auth.signInWithPassword({email:username.includes('@')?username.trim().toLowerCase():`${username.trim().toLowerCase()}@sitetrack.local`,password});if(error){setError('The username or password is incorrect. Please try again.');return}router.replace('/today');router.refresh()}catch{setError('Unable to connect. Check your connection and try again.')}finally{setBusy(false)}}
-return <div className="login"><section className="login-story"><div className="brand"><span className="brand-mark"><IconBuildingSkyscraper size={20}/></span>sitetrack<b>.</b><small>PRO</small></div><div className="intro"><div className="eyebrow">YOUR SITE. IN SYNC.</div><h1>Great projects.<br/><span>Grounded in clarity.</span></h1><p>From the first material indent to the final handover. Your people, progress, and projects in one workspace.</p></div><svg className="login-art" viewBox="0 0 460 200" fill="none" aria-label="Architectural line illustration of a building"><path d="M15 180H445M55 180V90L155 35L255 90V180M155 35V180M55 90L155 145L255 90M155 145L55 180M155 145L255 180" stroke="#46556c" strokeWidth="1.5"/><path d="M255 180V90L355 35L425 75V180M355 35V180M255 90L355 145L425 105M355 145L425 180" stroke="#7d91af" strokeWidth="1.5"/><path d="M55 120L155 175L255 120M55 150L110 180M255 120L355 175L425 135M255 150L310 180M80 76V164M105 62V177M130 49V180M180 49V180M205 62V163M230 76V150M280 76V164M305 62V177M330 49V180M380 49V159M405 63V173" stroke="#344154"/><path d="M55 90L155 35L255 90L355 35L425 75" stroke="#ffcb45" strokeWidth="2"/><circle cx="155" cy="35" r="4" fill="#ffcb45"/><circle cx="355" cy="35" r="4" fill="#ffcb45"/><path d="M25 195H435" stroke="#273341" strokeDasharray="4 5"/></svg><footer>AASHISH INFRA PROJECTS <span style={{float:'right'}}>BUILT FOR THE WAY YOU BUILD</span></footer></section><section className="login-form"><div className="login-box"><div className="eyebrow">AASHISH INFRA PROJECTS</div><h2>Welcome back.</h2><p>Sign in to your construction workspace.</p><form onSubmit={login}><div><label htmlFor="username">Username or email</label><input id="username" className="input" placeholder="Enter your username" autoComplete="username" value={username} onChange={e=>setUsername(e.target.value)} required/></div><div><label htmlFor="password">Password</label><div className="login-password"><input id="password" className="input" style={{paddingRight:40}} type={show?'text':'password'} autoComplete="current-password" placeholder="Enter your password" value={password} onChange={e=>setPassword(e.target.value)} required/><button type="button" aria-label={show?'Hide password':'Show password'} onClick={()=>setShow(!show)}>{show?<IconEyeOff size={17}/>:<IconEye size={17}/>}</button></div></div>{error&&<p role="alert" style={{color:'var(--rd)',marginBottom:15}}>{error}</p>}<button className="btn btn-acc" disabled={busy} type="submit">{busy?'Signing in…':'Sign in to workspace'}<IconArrowRight size={16}/></button></form><div className="login-secure"><IconLock size={14} style={{flexShrink:0,marginTop:3}}/><span>Secure access for your team.<br/>Need an account? Contact your workspace administrator.</span></div><div className="login-bottom">SiteTrack Pro <span style={{float:'right'}}>Construction, connected.</span></div></div></section></div>}
+import CoreArtwork from '@/components/CoreArtwork';
+export default function Login(){
+ const router=useRouter();
+ const [username,setUsername]=useState(''),[password,setPassword]=useState(''),[show,setShow]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState('');
+ async function login(e:React.FormEvent){
+  e.preventDefault();setBusy(true);setError('');
+  try{const sb=createClient();const {error}=await sb.auth.signInWithPassword({email:username.includes('@')?username.trim().toLowerCase():`${username.trim().toLowerCase()}@sitetrack.local`,password});
+   if(error){setError('The username or password is incorrect. Please try again.');return}
+   router.replace('/today');router.refresh();
+  }catch{setError('Unable to connect. Check your connection and try again.')}finally{setBusy(false)}
+ }
+ return <div className="core-login">
+  <header className="core-login-header">
+   <a className="core-wordmark" href="/login" aria-label="SiteTrack Pro home">sitetrack<span>.</span><small>PRO</small></a>
+   <div className="core-header-links"><span>Aashish Infra Projects</span><a href="#sign-in" className="btn btn-acc">Open workspace <IconArrowUpRight size={15}/></a></div>
+  </header>
+  <main className="core-login-main">
+   <section className="core-introduction">
+    <div className="core-pill"><IconCheck size={14}/><span>One workspace. <b>Every site connected.</b></span></div>
+    <h1>Your <span>construction</span><br/>starts here.</h1>
+    <p>Your people, materials, and progress.<br/>A clear picture of every project, from the first indent to the final handover.</p>
+    <a className="core-text-link" href="#sign-in">Step into your workspace <IconArrowRight size={18}/></a>
+    <CoreArtwork/>
+   </section>
+   <section className="core-access" id="sign-in" aria-labelledby="login-heading">
+    <div className="core-access-top"><span className="core-section-label">TEAM ACCESS</span><IconArrowUpRight size={20}/></div>
+    <div className="core-access-title"><span className="core-access-icon"><IconBuildingSkyscraper size={25} stroke={1.4}/></span><h2 id="login-heading">Welcome back<span>.</span></h2><p>Sign in to your construction workspace.</p></div>
+    <form onSubmit={login}>
+     <div className="core-field"><label htmlFor="username">Username or email</label><input id="username" className="input" placeholder="Enter your username" autoComplete="username" value={username} onChange={e=>setUsername(e.target.value)} required/></div>
+     <div className="core-field"><label htmlFor="password">Password</label><div className="login-password"><input id="password" className="input" style={{paddingRight:45}} type={show?'text':'password'} autoComplete="current-password" placeholder="Enter your password" value={password} onChange={e=>setPassword(e.target.value)} required/><button type="button" aria-label={show?'Hide password':'Show password'} onClick={()=>setShow(!show)}>{show?<IconEyeOff size={18}/>:<IconEye size={18}/>}</button></div></div>
+     {error&&<p className="core-login-error" role="alert">{error}</p>}
+     <button className="btn btn-acc core-signin" disabled={busy} type="submit">{busy?'Signing in…':'Sign in to workspace'}<IconArrowRight size={18}/></button>
+    </form>
+    <div className="core-access-note"><IconLock size={15}/><p>Secure access for your team.<br/><span>Need an account? Contact your administrator.</span></p></div>
+   </section>
+  </main>
+  <section className="core-login-capabilities" aria-label="Workspace capabilities">
+   <div><IconBuildingSkyscraper size={22} stroke={1.4}/><span><strong>Project clarity</strong><small>Daily work, progress & BOQ</small></span></div>
+   <div><IconPackage size={22} stroke={1.4}/><span><strong>Connected procurement</strong><small>Indents, approvals & deliveries</small></span></div>
+   <div><IconUsers size={22} stroke={1.4}/><span><strong>Your team, together</strong><small>Labour, quality & finance</small></span></div>
+  </section>
+  <footer className="core-login-footer"><span>SiteTrack Pro · Aashish Infra Projects</span><span>Hyderabad, India</span></footer>
+ </div>;
+}
