@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { canSeeFinance, UNITS } from "@/lib/roles";
 import type { MaterialOrderDelivery, MaterialOrderView, Profile, ProjectView } from "@/lib/types";
@@ -199,8 +199,8 @@ export default function OrdersPage() {
           </thead>
           <tbody>
             {orders.map((o) => (
-              <>
-                <tr key={o.id}>
+              <React.Fragment key={o.id}>
+                <tr>
                   <td>{projectName(o.project_id)}</td>
                   <td>{o.vendor}</td>
                   <td>{o.material}</td>
@@ -226,7 +226,7 @@ export default function OrdersPage() {
                   </td>
                 </tr>
                 {expanded === o.id && (
-                  <tr key={o.id + "-panel"}>
+                  <tr>
                     <td colSpan={finance ? 10 : 9} style={{ background: "var(--s2)" }}>
                       <div style={{ padding: 12 }}>
                         <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 8, color: "var(--t2)" }}>Delivery History</div>
@@ -273,7 +273,7 @@ export default function OrdersPage() {
                     </td>
                   </tr>
                 )}
-              </>
+              </React.Fragment>
             ))}
             {orders.length === 0 && (
               <tr><td colSpan={finance ? 10 : 9} style={{ textAlign: "center", color: "var(--t3)", padding: 24 }}>No orders yet.</td></tr>
