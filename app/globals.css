@@ -1,0 +1,65 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #0a0e1a;
+  --s1: #0f1525;
+  --s2: #161e34;
+  --s3: #1d2742;
+  --br: #252f4d;
+  --br2: #2e3a5e;
+  --t1: #e8ecf7;
+  --t2: #a0a8c2;
+  --t3: #6b7494;
+  --acc: #fb923c;
+  --agl: rgba(251, 146, 60, 0.3);
+  --bl: #3b82f6;
+  --gr: #10b981;
+  --rd: #ef4444;
+  --pu: #a78bfa;
+  --yl: #fbbf24;
+}
+
+* { box-sizing: border-box; }
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--t1);
+  min-height: 100vh;
+}
+input, select, textarea, button { font-family: inherit; color: inherit; }
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--acc) !important;
+  box-shadow: 0 0 0 3px var(--agl);
+}
+button { transition: all 0.14s; }
+button:hover { filter: brightness(1.1); }
+button:active { transform: scale(0.97); }
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--s1); }
+::-webkit-scrollbar-thumb { background: var(--br2); border-radius: 4px; }
+
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px);} to { opacity:1; transform: translateY(0);} }
+@keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.4;} }
+.fadeIn { animation: fadeIn .28s ease; }
+.pulse { animation: pulse 2s infinite; }
+
+.card { background: var(--s1); border: 1px solid var(--br); border-radius: 14px; }
+.badge { border-radius: 10px; padding: 2px 8px; font-size: 10px; font-weight: 700; }
+.input {
+  background: var(--s2); border: 1px solid var(--br); border-radius: 9px;
+  padding: 9px 12px; font-size: 13px; color: var(--t1); width: 100%;
+}
+.btn {
+  border-radius: 9px; padding: 9px 16px; font-size: 13px; font-weight: 600;
+  cursor: pointer; border: 1px solid var(--br);
+}
+.btn-acc { background: linear-gradient(135deg,#fb923c,#f97316); color: #fff; border: none; }
+.btn-ghost { background: var(--s2); color: var(--t1); }
+.table-wrap { overflow-x: auto; }
+table.dt { width: 100%; border-collapse: collapse; font-size: 13px; }
+table.dt th { text-align: left; color: var(--t3); font-weight: 700; font-size: 11px; letter-spacing: .04em; padding: 10px 12px; border-bottom: 1px solid var(--br); white-space: nowrap; }
+table.dt td { padding: 10px 12px; border-bottom: 1px solid var(--br); vertical-align: top; }
+table.dt tr:hover td { background: var(--s2); }
