@@ -25,3 +25,10 @@ test('login keeps valid deep links and filters while rejecting unsafe destinatio
  assert.equal(safeReturnTo('/vendorledger','engineer'),'/today');
  assert.equal(safeReturnTo('/vendorledger','md'),'/vendorledger');
 });
+test('all administrator URLs require admin and survive sign-in safely',()=>{
+ for(const path of ['/admin','/admin/users','/admin/users/new',`/admin/users/${id}/edit`,'/admin/records','/admin/records/projects','/admin/records/projects/new',`/admin/records/projects/${id}/edit`,'/admin/activity']){
+  assert.equal(isAppPath(path),true,path);assert.equal(canAccessPath(path,'admin'),true,path);assert.equal(safeReturnTo(path,'admin'),path);
+  for(const role of ['md','engineer','sales','qms','accounts'])assert.equal(canAccessPath(path,role),false,role+' '+path);
+ }
+ for(const path of ['/admin/users/no-such-user/edit','/admin/records/profiles','/admin/anything','/admin/records/__proto__'])assert.equal(isAppPath(path),false,path);
+});

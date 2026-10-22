@@ -1,12 +1,9 @@
 import Shell from "@/components/Shell";
-import { createClient } from '@/lib/supabase/server';
+import { getWorkspaceProfile } from '@/lib/auth/server';
 import { redirect } from 'next/navigation';
 
 export default async function AppGroupLayout({ children }: { children: React.ReactNode }) {
-  const sb = createClient();
-  const {data:{user}} = await sb.auth.getUser();
-  if (!user) redirect('/login');
-  const {data:profile} = await sb.from('profiles').select('id').eq('id',user.id).single();
+  const profile=await getWorkspaceProfile();
   if (!profile) redirect('/access-denied');
-  return <Shell>{children}</Shell>;
+  return <Shell initialProfile={profile}>{children}</Shell>;
 }

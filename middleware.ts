@@ -44,8 +44,8 @@ export async function middleware(request: NextRequest) {
   }
 
   if (user && (isLoginPage || isAppPath(path))) {
-    const {data:profile} = await supabase.from('profiles').select('role').eq('id',user.id).single();
-    if (!profile) return redirect('/access-denied');
+    const {data:profile} = await supabase.from('profiles').select('role,is_active').eq('id',user.id).single();
+    if (!profile?.is_active) return redirect('/access-denied');
     if (isLoginPage) return redirect(safeReturnTo(request.nextUrl.searchParams.get('next'), profile.role));
     if (!canAccessPath(path, profile.role)) return redirect('/access-denied');
   }

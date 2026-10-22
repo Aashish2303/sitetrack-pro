@@ -37,6 +37,7 @@ export const NAV_ITEMS: NavItem[] = [
   { id: "vendorledger", href: "/vendorledger", label: "Vendor Ledger", icon: "ti-receipt", roles: ["md", "qms", "accounts", "admin"], group: "Finance & QMS" },
   { id: "vendordb", href: "/vendordb", label: "Vendor Directory", icon: "ti-address-book", roles: ["md", "sales", "admin"], group: "Finance & QMS" },
   { id: "reports", href: "/reports", label: "QMS Reports", icon: "ti-file-report", roles: "all", group: "Finance & QMS" },
+  { id: "admin", href: "/admin", label: "Administration", icon: "ti-shield-lock", roles: ["admin"], group: "Finance & QMS" },
 ];
 
 export function navForRole(role: Role | null | undefined): NavItem[] {

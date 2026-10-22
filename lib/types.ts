@@ -6,6 +6,7 @@ export type Profile = {
   name: string;
   role: Role;
   avatar: string;
+  is_active?: boolean;
 };
 
 export type Project = {
