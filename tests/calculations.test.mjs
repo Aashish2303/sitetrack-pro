@@ -1,0 +1,4 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {workingHours,orderProgress,stock} from '../lib/calculations.mjs';
+test('hours support night shifts, equal times and missing clock-out',()=>{assert.equal(workingHours('22:00','06:00'),8);assert.equal(workingHours('08:30','17:45'),9.25);assert.equal(workingHours('08:00','08:00'),0);assert.equal(workingHours('08:00',''),null);assert.equal(workingHours('30:00','08:00'),null)});
+test('partial deliveries sum against one order',()=>{assert.deepEqual(orderProgress(100,[25,40]),{received:65,pending:35,percentage:65,complete:false});assert.equal(orderProgress(100,[25,40,35]).complete,true)});
+test('stock reconciles opening, receipts and consumption',()=>{assert.equal(stock(100,[{type:'Inward',quantity:40},{type:'Consumption',quantity:65}]),75)});

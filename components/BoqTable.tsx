@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { canSeeFinance } from "@/lib/roles";
+import { canSeeFinance, UNITS } from "@/lib/roles";
 import type { BoqItemView, Profile } from "@/lib/types";
 
 function progressColor(pct: number) {
@@ -10,60 +10,7 @@ function progressColor(pct: number) {
   return "var(--rd)";
 }
 
-export default function BoqTable({ projectId }: { projectId: string }) {
-  const supabase = useMemo(() => createClient(), []);
-  const [rows, setRows] = useState<BoqItemView[]>([]);
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [adding, setAdding] = useState(false);
-  const [form, setForm] = useState({ item: "", unit: "Cum", boq_qty: "", rate: "", is_extra: false });
-
-  async function load() {
-    const { data } = await supabase
-      .from("boq_items_view")
-      .select("*")
-      .eq("project_id", projectId)
-      .order("is_extra", { ascending: true });
-    setRows((data as BoqItemView[]) || []);
-  }
-
-  useEffect(() => {
-    (async () => {
-      const { data: auth } = await supabase.auth.getUser();
-      if (auth.user) {
-        const { data: p } = await supabase.from("profiles").select("*").eq("id", auth.user.id).single();
-        setProfile(p as Profile);
-      }
-      load();
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projectId]);
-
-  const finance = canSeeFinance(profile?.role);
-
-  async function addItem() {
-    if (!form.item || !form.boq_qty) return;
-    await supabase.from("boq_items").insert({
-      project_id: projectId,
-      item: form.item,
-      unit: form.unit,
-      boq_qty: Number(form.boq_qty),
-      rate: Number(form.rate || 0),
-      is_extra: form.is_extra,
-    });
-    setForm({ item: "", unit: "Cum", boq_qty: "", rate: "", is_extra: false });
-    setAdding(false);
-    load();
-  }
-
-  async function updateField(id: string, field: string, value: string) {
-    await supabase.from("boq_items").update({ [field]: field === "item" || field === "unit" ? value : Number(value) }).eq("id", id);
-    load();
-  }
-
-  const mainItems = rows.filter((r) => !r.is_extra);
-  const extraItems = rows.filter((r) => r.is_extra);
-
-  function Row({ r }: { r: BoqItemView }) {
+function BoqRow({r,finance,updateField}:{r:BoqItemView;finance:boolean;updateField:(id:string,field:string,value:string)=>Promise<void>}){
     return (
       <tr>
         <td>
@@ -75,7 +22,7 @@ export default function BoqTable({ projectId }: { projectId: string }) {
           />
         </td>
         <td>
-          <input className="input" defaultValue={r.unit} onBlur={(e) => e.target.value !== r.unit && updateField(r.id, "unit", e.target.value)} style={{ width: 70 }} />
+          <select aria-label="Unit" className="input" value={r.unit} onChange={e=>updateField(r.id,"unit",e.target.value)} style={{width:90}}>{Array.from(new Set([r.unit,...UNITS])).map(u=><option key={u}>{u}</option>)}</select>
         </td>
         <td>
           <input
@@ -121,6 +68,62 @@ export default function BoqTable({ projectId }: { projectId: string }) {
     );
   }
 
+
+export default function BoqTable({ projectId }: { projectId: string }) {
+  const supabase = useMemo(() => createClient(), []);
+  const [rows, setRows] = useState<BoqItemView[]>([]);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [adding, setAdding] = useState(false);
+  const [form, setForm] = useState({ item: "", unit: "Cum", boq_qty: "", rate: "", is_extra: false });
+
+  async function load() {
+    const { data } = await supabase
+      .from("boq_items_view")
+      .select("*")
+      .eq("project_id", projectId)
+      .order("is_extra", { ascending: true });
+    setRows((data as BoqItemView[]) || []);
+  }
+
+  useEffect(() => {
+    (async () => {
+      const { data: auth } = await supabase.auth.getUser();
+      if (auth.user) {
+        const { data: p } = await supabase.from("profiles").select("*").eq("id", auth.user.id).single();
+        setProfile(p as Profile);
+      }
+      load();
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId]);
+
+  useEffect(()=>{window.addEventListener('st:refresh',load);return()=>window.removeEventListener('st:refresh',load)});
+  const finance = canSeeFinance(profile?.role);
+
+  async function addItem() {
+    if (!form.item || !form.boq_qty) return;
+    await supabase.from("boq_items").insert({
+      project_id: projectId,
+      item: form.item,
+      unit: form.unit,
+      boq_qty: Number(form.boq_qty),
+      rate: Number(form.rate || 0),
+      is_extra: form.is_extra,
+    });
+    setForm({ item: "", unit: "Cum", boq_qty: "", rate: "", is_extra: false });
+    setAdding(false);
+    load();
+  }
+
+  async function updateField(id: string, field: string, value: string) {
+    await supabase.from("boq_items").update({ [field]: field === "item" || field === "unit" ? value : Number(value) }).eq("id", id);
+    load();
+  }
+
+  const mainItems = rows.filter((r) => !r.is_extra);
+  const extraItems = rows.filter((r) => r.is_extra);
+
+
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
@@ -138,7 +141,7 @@ export default function BoqTable({ projectId }: { projectId: string }) {
           </div>
           <div>
             <label style={{ fontSize: 11, color: "var(--t3)" }}>Unit</label>
-            <input className="input" style={{ width: 80 }} value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} />
+            <select className="input" style={{width:90}} value={form.unit} onChange={e=>setForm({...form,unit:e.target.value})}>{UNITS.map(u=><option key={u}>{u}</option>)}</select>
           </div>
           <div>
             <label style={{ fontSize: 11, color: "var(--t3)" }}>Quantity</label>
@@ -170,7 +173,7 @@ export default function BoqTable({ projectId }: { projectId: string }) {
             </tr>
           </thead>
           <tbody>
-            {mainItems.map((r) => <Row key={r.id} r={r} />)}
+            {mainItems.map((r) => <BoqRow key={r.id+JSON.stringify(r)} r={r} finance={finance} updateField={updateField} />)}
             {extraItems.length > 0 && (
               <tr>
                 <td colSpan={finance ? 9 : 6} style={{ color: "var(--acc)", fontWeight: 700, fontSize: 11 }}>
@@ -178,7 +181,7 @@ export default function BoqTable({ projectId }: { projectId: string }) {
                 </td>
               </tr>
             )}
-            {extraItems.map((r) => <Row key={r.id} r={r} />)}
+            {extraItems.map((r) => <BoqRow key={r.id+JSON.stringify(r)} r={r} finance={finance} updateField={updateField} />)}
             {rows.length === 0 && (
               <tr><td colSpan={9} style={{ textAlign: "center", color: "var(--t3)", padding: 24 }}>No BOQ items yet.</td></tr>
             )}

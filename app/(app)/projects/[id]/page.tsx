@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
+import Link from 'next/link';
 import { createClient } from "@/lib/supabase/client";
 import { canSeeFinance } from "@/lib/roles";
 import BoqTable from "@/components/BoqTable";
@@ -9,6 +10,8 @@ export default function ProjectDetail({ params }: { params: { id: string } }) {
   const supabase = useMemo(() => createClient(), []);
   const [project, setProject] = useState<ProjectView | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [failure, setFailure] = useState('');
 
   useEffect(() => {
     (async () => {
@@ -17,16 +20,20 @@ export default function ProjectDetail({ params }: { params: { id: string } }) {
         const { data: p } = await supabase.from("profiles").select("*").eq("id", auth.user.id).single();
         setProfile(p as Profile);
       }
-      const { data } = await supabase.from("projects_view").select("*").eq("id", params.id).single();
+      const { data, error } = await supabase.from("projects_view").select("*").eq("id", params.id).maybeSingle();
+      if (error) setFailure('Unable to load this project. Please refresh and try again.');
       setProject(data as ProjectView);
+      setLoading(false);
     })();
   }, [supabase, params.id]);
 
-  if (!project) return null;
+  if (loading) return <div className="empty" role="status">Loading project…</div>;
+  if (!project) return <div className="card empty"><p>{failure || 'Project not found or unavailable to your account.'}</p><Link className="btn btn-ghost" href="/projects">All projects</Link></div>;
   const finance = canSeeFinance(profile?.role);
 
   return (
     <div>
+      <Link href="/projects" className="back-link">← All projects</Link>
       <h1 style={{ fontSize: 20, fontWeight: 800, marginBottom: 4 }}>{project.name}</h1>
       <p style={{ color: "var(--t3)", fontSize: 13, marginBottom: 18 }}>
         {project.client_name} · {project.location} · {project.status}

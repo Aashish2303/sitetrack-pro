@@ -1,4 +1,8 @@
 "use client";
+import {canAccessPath} from "@/lib/routing.mjs";
+import { useRouteFilter } from "@/lib/use-route-form";
+import { useRouteForm } from "@/lib/use-route-form";
+import { today } from "@/lib/date";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -24,15 +28,15 @@ export default function IndentsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [indents, setIndents] = useState<Indent[]>([]);
   const [itemCounts, setItemCounts] = useState<Record<string, number>>({});
-  const [adding, setAdding] = useState(false);
+  const [adding, setAdding] = useRouteForm("/indents");
   const [saving, setSaving] = useState(false);
 
-  const [filterProject, setFilterProject] = useState("all");
-  const [filterStatus, setFilterStatus] = useState("all");
+  const [filterProject, setFilterProject] = useRouteFilter("project", "all");
+  const [filterStatus, setFilterStatus] = useRouteFilter("status", "all");
 
   const [form, setForm] = useState({
     project_id: "",
-    date: new Date().toISOString().slice(0, 10),
+    date: today(),
     urgency: "Normal",
     engineer: "",
     notes: "",
@@ -40,8 +44,10 @@ export default function IndentsPage() {
   });
   const [items, setItems] = useState<DraftItem[]>([emptyItem()]);
 
+  useEffect(() => { const refresh = () => { load(); }; window.addEventListener("st:refresh", refresh); return () => window.removeEventListener("st:refresh", refresh); });
+
   async function load() {
-    const { data: projData } = await supabase.from("projects").select("*").order("name", { ascending: true });
+    const { data: projData } = await supabase.from("projects_view").select("*").order("name", { ascending: true });
     setProjects((projData as Project[]) || []);
 
     const { data: indentData } = await supabase.from("indents").select("*").order("created_at", { ascending: false });
@@ -83,34 +89,10 @@ export default function IndentsPage() {
     if (validItems.length === 0) return;
     setSaving(true);
     try {
-      const { data: indent, error } = await supabase
-        .from("indents")
-        .insert({
-          project_id: form.project_id,
-          date: form.date,
-          urgency: form.urgency,
-          engineer: form.engineer,
-          notes: form.notes || null,
-          note_for_approval: form.note_for_approval || null,
-          status: "Pending Quotation",
-        })
-        .select()
-        .single();
-      if (error || !indent) return;
-
-      const rows = validItems.map((it) => ({
-        indent_id: indent.id,
-        material_name: it.material_name,
-        quantity: Number(it.quantity),
-        unit: it.unit,
-        size: it.size || null,
-        category: it.category || null,
-        item_status: "Pending",
-      }));
-      await supabase.from("indent_items").insert(rows);
-
-      setForm({ project_id: "", date: new Date().toISOString().slice(0, 10), urgency: "Normal", engineer: "", notes: "", note_for_approval: "" });
+      const {error} = await supabase.rpc('create_indent',{p_header:form,p_items:validItems.map(it=>({...it,quantity:Number(it.quantity)}))});
+      if(error) throw error;
       setItems([emptyItem()]);
+      setForm(f=>({...f,notes:'',note_for_approval:''}));
       setAdding(false);
       load();
     } finally {
@@ -128,9 +110,9 @@ export default function IndentsPage() {
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
         <h1 style={{ fontSize: 20, fontWeight: 800 }}>Material Indents</h1>
-        <button className="btn btn-acc" onClick={() => setAdding(!adding)}>
+        {canAccessPath("/indents/new", profile?.role) && <button className="btn btn-acc" onClick={() => setAdding(!adding)}>
           <i className="ti ti-plus" /> New Indent
-        </button>
+        </button>}
       </div>
 
       {adding && (

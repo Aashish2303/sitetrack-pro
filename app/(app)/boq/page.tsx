@@ -1,4 +1,5 @@
 "use client";
+import { useRouteFilter } from "@/lib/use-route-form";
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import BoqTable from "@/components/BoqTable";
@@ -7,7 +8,7 @@ import type { ProjectView } from "@/lib/types";
 export default function BoqPage() {
   const supabase = useMemo(() => createClient(), []);
   const [projects, setProjects] = useState<ProjectView[]>([]);
-  const [selected, setSelected] = useState<string>("all");
+  const [selected, setSelected] = useRouteFilter("project", "all");
 
   useEffect(() => {
     (async () => {

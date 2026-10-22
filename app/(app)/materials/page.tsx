@@ -1,4 +1,8 @@
 "use client";
+import { useRouteFilter } from "@/lib/use-route-form";
+import { useRouteForm } from "@/lib/use-route-form";
+import { usePathname, useRouter } from "next/navigation";
+import { today } from "@/lib/date";
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { UNITS } from "@/lib/roles";
@@ -8,27 +12,31 @@ type TxType = "Inward" | "Consumption";
 
 export default function MaterialsPage() {
   const supabase = useMemo(() => createClient(), []);
-  const [tab, setTab] = useState<"master" | "stock">("master");
+  const path = usePathname(), router = useRouter();
+  const tab = path === "/materials/stock" || path === "/materials/transactions/new" ? "stock" : "master";
+  const setTab = (value: "master" | "stock") => router.push(value === "stock" ? "/materials/stock" : "/materials");
   const [profile, setProfile] = useState<Profile | null>(null);
 
   const [materials, setMaterials] = useState<Material[]>([]);
   const [transactions, setTransactions] = useState<MaterialTransaction[]>([]);
   const [projects, setProjects] = useState<ProjectView[]>([]);
 
-  const [addingMaterial, setAddingMaterial] = useState(false);
+  const [addingMaterial, setAddingMaterial] = useRouteForm("/materials");
   const [materialForm, setMaterialForm] = useState({ name: "", unit: UNITS[0], category: "", opening_stock: "" });
 
-  const [selectedProject, setSelectedProject] = useState<string>("all");
-  const [addingTx, setAddingTx] = useState(false);
+  const [selectedProject, setSelectedProject] = useRouteFilter("project", "all");
+  const [addingTx, setAddingTx] = useRouteForm("/materials/stock", "/materials/transactions/new");
   const [txForm, setTxForm] = useState({
     project_id: "",
     material_id: "",
-    date: new Date().toISOString().slice(0, 10),
+    date: today(),
     type: "Inward" as TxType,
     quantity: "",
     reference: "",
     remarks: "",
   });
+
+  useEffect(() => { const refresh = () => { loadMaterials(); loadTransactions(); }; window.addEventListener("st:refresh", refresh); return () => window.removeEventListener("st:refresh", refresh); });
 
   async function loadMaterials() {
     const { data } = await supabase.from("materials").select("*").order("name", { ascending: true });

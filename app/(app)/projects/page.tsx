@@ -1,4 +1,6 @@
 "use client";
+import { usePathname, useParams, useRouter } from "next/navigation";
+import { useRouteForm } from "@/lib/use-route-form";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -9,15 +11,21 @@ type DraftBoq = { item: string; unit: string; boq_qty: string; rate: string };
 
 export default function ProjectsPage() {
   const supabase = useMemo(() => createClient(), []);
+  const routeParams = useParams<{id?:string}>(), routePath = usePathname(), router = useRouter();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [projects, setProjects] = useState<ProjectView[]>([]);
-  const [adding, setAdding] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+  const [editing,setEditing]=useState<string|null>(null);
+  const [adding, setAdding] = useRouteForm("/projects");
   const [form, setForm] = useState({ name: "", location: "", client_name: "", value: "", start_date: "", end_date: "", status: "Active" });
   const [draftBoq, setDraftBoq] = useState<DraftBoq[]>([]);
+
+  useEffect(() => { const refresh = () => { load(); }; window.addEventListener("st:refresh", refresh); return () => window.removeEventListener("st:refresh", refresh); });
 
   async function load() {
     const { data } = await supabase.from("projects_view").select("*").order("created_at", { ascending: false });
     setProjects((data as ProjectView[]) || []);
+    setLoaded(true);
   }
 
   useEffect(() => {
@@ -31,23 +39,32 @@ export default function ProjectsPage() {
     })();
   }, [supabase]);
 
+  useEffect(() => {
+    if (!routePath.endsWith('/edit') || !routeParams.id) return;
+    const p = projects.find(p => p.id === routeParams.id);
+    if (!p) return;
+    setEditing(p.id);
+    setForm({name:p.name,location:p.location||'',client_name:p.client_name||'',value:String(p.value||0),start_date:p.start_date||'',end_date:p.end_date||'',status:p.status});
+    setDraftBoq([]);
+  }, [projects, routeParams.id, routePath]);
+
   const finance = canSeeFinance(profile?.role);
 
   async function createProject() {
     if (!form.name) return;
-    const { data, error } = await supabase
-      .from("projects")
-      .insert({
+    const payload = {
         name: form.name,
         location: form.location,
         client_name: form.client_name,
-        value: Number(form.value || 0),
+        ...(finance ? {value:Number(form.value || 0)} : {}),
         start_date: form.start_date || null,
         end_date: form.end_date || null,
         status: form.status,
-      })
-      .select()
-      .single();
+      };
+    const result = editing
+      ? await supabase.from('projects').update(payload).eq('id',editing).select('id').single()
+      : await supabase.from('projects').insert(payload).select('id').single();
+    const {data,error}=result;
     if (error || !data) return;
 
     const rows = draftBoq
@@ -57,6 +74,7 @@ export default function ProjectsPage() {
 
     setForm({ name: "", location: "", client_name: "", value: "", start_date: "", end_date: "", status: "Active" });
     setDraftBoq([]);
+    setEditing(null);
     setAdding(false);
     load();
   }
@@ -66,11 +84,17 @@ export default function ProjectsPage() {
     load();
   }
 
+  if (routePath.endsWith('/edit')) {
+    if (!loaded) return <div className="empty" role="status">Loading project…</div>;
+    if (!projects.some(p => p.id === routeParams.id)) return <div className="card empty"><p>Project not found or unavailable to your account.</p><Link className="btn btn-ghost" href="/projects">All projects</Link></div>;
+    if (editing !== routeParams.id) return <div className="empty" role="status">Opening project editor…</div>;
+  }
+
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
         <h1 style={{ fontSize: 20, fontWeight: 800 }}>Projects</h1>
-        <button className="btn btn-acc" onClick={() => setAdding(!adding)}><i className="ti ti-plus" /> Add Project</button>
+        <button className="btn btn-acc" onClick={() => {setEditing(null);setForm({name:"",location:"",client_name:"",value:"",start_date:"",end_date:"",status:"Active"});setAdding(!adding)}}><i className="ti ti-plus" /> Add Project</button>
       </div>
 
       {adding && (
@@ -105,7 +129,7 @@ export default function ProjectsPage() {
           ))}
 
           <div style={{ marginTop: 14, display: "flex", gap: 8 }}>
-            <button className="btn btn-acc" onClick={createProject}>Create Project</button>
+            <button className="btn btn-acc" onClick={createProject}>{editing?"Save project":"Create Project"}</button>
             <button className="btn btn-ghost" onClick={() => setAdding(false)}>Cancel</button>
           </div>
         </div>
@@ -125,7 +149,7 @@ export default function ProjectsPage() {
             <div style={{ background: "var(--s2)", borderRadius: 6, height: 8, overflow: "hidden" }}>
               <div style={{ width: `${p.progress_pct}%`, height: "100%", background: p.progress_pct >= 80 ? "var(--gr)" : p.progress_pct >= 50 ? "var(--yl)" : "var(--rd)" }} />
             </div>
-            <div style={{ fontSize: 11, color: "var(--t3)", marginTop: 6 }}>{p.progress_pct}% complete</div>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginTop:12}}><span style={{fontSize:11,color:'var(--t3)'}}>{p.progress_pct}% complete</span><button className="btn btn-ghost" onClick={()=>{setEditing(p.id);setForm({name:p.name,location:p.location||'',client_name:p.client_name||'',value:String(p.value||0),start_date:p.start_date||'',end_date:p.end_date||'',status:p.status});setDraftBoq([]);router.push(`/projects/${p.id}/edit`);window.scrollTo({top:0,behavior:'smooth'})}}>Edit project</button></div>
           </div>
         ))}
         {projects.length === 0 && <div style={{ color: "var(--t3)" }}>No projects yet — add your first one.</div>}

@@ -1,0 +1,10 @@
+"use client";
+import {useEffect,useState} from 'react';
+import Link from 'next/link';
+import {adminCall} from '@/lib/admin/client';
+import {ADMIN_ENTITIES} from '@/lib/admin/entities.mjs';
+export default function AdminOverview(){
+ const [data,setData]=useState<any>(null),[error,setError]=useState('');
+ useEffect(()=>{let live=true;adminCall('overview').then(d=>{if(live)setData(d)}).catch(e=>{if(live)setError(e.message)});return()=>{live=false}},[]);
+ return <>{error&&<div className="admin-error" role="alert">{error}</div>}<div className="admin-stats">{[['Team accounts',data?.users],['Active accounts',data?.active_users],['Administrators',data?.administrators],['Record types',Object.keys(ADMIN_ENTITIES).length]].map(([label,value])=><div className="card admin-stat" key={label}><p>{label}</p><strong>{value??'—'}</strong></div>)}</div><div className="admin-grid"><Link className="card admin-tile" href="/admin/users"><i className="ti ti-users"/><i className="ti ti-arrow-up-right admin-arrow"/><h2>People & access</h2><p>Add team members, assign roles, deactivate accounts and manage passwords.</p></Link><Link className="card admin-tile" href="/admin/records"><i className="ti ti-database-edit"/><i className="ti ti-arrow-up-right admin-arrow"/><h2>Workspace records</h2><p>Edit projects, BOQ, labour, materials, orders, issues and financial ledgers.</p></Link><Link className="card admin-tile" href="/admin/activity"><i className="ti ti-history"/><i className="ti ti-arrow-up-right admin-arrow"/><h2>Activity history</h2><p>Review administrator actions, account changes and record corrections.</p></Link></div><div className="admin-section-heading"><h2>Manage your workspace</h2><Link className="btn btn-ghost" href="/admin/records">All record types →</Link></div><div className="admin-grid">{Object.entries(ADMIN_ENTITIES).map(([key,e])=><Link className="card admin-tile" key={key} href={`/admin/records/${key}`}><i className={`ti ${e.icon}`}/><i className="ti ti-arrow-up-right admin-arrow"/><h2>{e.label}</h2><p>{data?.counts?.[key]??'—'} records · {e.readOnly?'Review in workflow':'View, add & edit'}</p></Link>)}</div></>;
+}

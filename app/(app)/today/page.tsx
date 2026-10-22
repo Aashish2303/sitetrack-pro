@@ -1,110 +1,19 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
-import { canSeeFinance } from "@/lib/roles";
-import type { Profile, ProjectView } from "@/lib/types";
-
-function fmtMoney(n: number | null | undefined) {
-  if (n == null) return "—";
-  return "₹" + Number(n).toLocaleString("en-IN", { maximumFractionDigits: 0 });
-}
-
-export default function TodayPage() {
-  const supabase = useMemo(() => createClient(), []);
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [projects, setProjects] = useState<ProjectView[]>([]);
-  const [stats, setStats] = useState({ labourToday: 0, pendingIndents: 0, openIssues: 0, boqValue: 0, doneValue: 0 });
-
-  useEffect(() => {
-    (async () => {
-      const { data: auth } = await supabase.auth.getUser();
-      if (!auth.user) return;
-      const { data: p } = await supabase.from("profiles").select("*").eq("id", auth.user.id).single();
-      setProfile(p as Profile);
-
-      const { data: proj } = await supabase.from("projects_view").select("*").order("created_at", { ascending: false });
-      setProjects((proj as ProjectView[]) || []);
-
-      const today = new Date().toISOString().slice(0, 10);
-      const { data: labour } = await supabase.from("labour_entries").select("id").eq("date", today);
-      const { count: pendingIndents } = await supabase
-        .from("indents").select("*", { count: "exact", head: true }).in("status", ["Pending Quotation", "MD Review"]);
-      const { count: openIssues } = await supabase
-        .from("issues").select("*", { count: "exact", head: true }).eq("status", "Open");
-      const { data: boqRows } = await supabase.from("boq_items_view").select("boq_value, done_value");
-      const boqValue = (boqRows || []).reduce((s, r: any) => s + (r.boq_value || 0), 0);
-      const doneValue = (boqRows || []).reduce((s, r: any) => s + (r.done_value || 0), 0);
-
-      setStats({
-        labourToday: labour?.length || 0,
-        pendingIndents: pendingIndents || 0,
-        openIssues: openIssues || 0,
-        boqValue,
-        doneValue,
-      });
-    })();
-  }, [supabase]);
-
-  if (!profile) return null;
-  const finance = canSeeFinance(profile.role);
-  const activeProjects = projects.filter((p) => p.status === "Active");
-
-  const cards = [
-    { label: "Active Projects", value: activeProjects.length, icon: "ti-building-skyscraper", color: "var(--bl)" },
-    { label: "Labour Today", value: stats.labourToday, icon: "ti-users", color: "var(--pu)" },
-    { label: "Pending Indents", value: stats.pendingIndents, icon: "ti-package", color: "var(--acc)" },
-    { label: "Open Issues", value: stats.openIssues, icon: "ti-alert-triangle", color: "var(--rd)" },
-  ];
-  if (finance) {
-    cards.push({ label: "BOQ Value", value: fmtMoney(stats.boqValue) as any, icon: "ti-report-money", color: "var(--gr)" });
-    cards.push({ label: "Done Value", value: fmtMoney(stats.doneValue) as any, icon: "ti-check", color: "var(--yl)" });
-  }
-
-  return (
-    <div>
-      <h1 style={{ fontSize: 22, fontWeight: 800, marginBottom: 4 }}>
-        {(() => {
-          const h = new Date().getHours();
-          return h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
-        })()}, {profile.name.split(" ")[0]}
-      </h1>
-      <p style={{ color: "var(--t3)", fontSize: 13, marginBottom: 22 }}>
-        {new Date().toLocaleDateString("en-IN", { weekday: "long", day: "2-digit", month: "long", year: "numeric" })}
-      </p>
-
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(160px,1fr))", gap: 14, marginBottom: 26 }}>
-        {cards.map((c) => (
-          <div key={c.label} className="card" style={{ padding: 16 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-              <i className={"ti " + c.icon} style={{ color: c.color, fontSize: 18 }} />
-              <span style={{ fontSize: 11, color: "var(--t3)", fontWeight: 700 }}>{c.label.toUpperCase()}</span>
-            </div>
-            <div style={{ fontSize: 24, fontWeight: 800 }}>{c.value}</div>
-          </div>
-        ))}
-      </div>
-
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-        <h2 style={{ fontSize: 15, fontWeight: 700 }}>Active Projects</h2>
-        <div style={{ display: "flex", gap: 8 }}>
-          <Link href="/materials" className="btn btn-ghost" style={{ textDecoration: "none", fontSize: 12 }}>Materials</Link>
-          <Link href="/indents" className="btn btn-ghost" style={{ textDecoration: "none", fontSize: 12 }}>Indents</Link>
-        </div>
-      </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(280px,1fr))", gap: 14 }}>
-        {activeProjects.length === 0 && <div style={{ color: "var(--t3)", fontSize: 13 }}>No active projects yet.</div>}
-        {activeProjects.map((p) => (
-          <Link key={p.id} href={`/projects/${p.id}`} className="card" style={{ padding: 16, textDecoration: "none", color: "var(--t1)" }}>
-            <div style={{ fontWeight: 700, marginBottom: 4 }}>{p.name}</div>
-            <div style={{ fontSize: 12, color: "var(--t3)", marginBottom: 10 }}>{p.location}</div>
-            <div style={{ background: "var(--s2)", borderRadius: 6, height: 8, overflow: "hidden" }}>
-              <div style={{ width: `${p.progress_pct}%`, height: "100%", background: p.progress_pct >= 80 ? "var(--gr)" : p.progress_pct >= 50 ? "var(--yl)" : "var(--rd)" }} />
-            </div>
-            <div style={{ fontSize: 11, color: "var(--t3)", marginTop: 6 }}>{p.progress_pct}% complete</div>
-          </Link>
-        ))}
-      </div>
-    </div>
-  );
-}
+import {canAccessPath} from "@/lib/routing.mjs";
+import {useEffect,useMemo,useState} from 'react';
+import Link from 'next/link';
+import {IconBuildingSkyscraper,IconUsers,IconPackage,IconAlertTriangle,IconArrowUpRight,IconChevronRight,IconPlus,IconClipboardCheck,IconTruck,IconListNumbers,IconArrowRight,IconCalendar} from '@tabler/icons-react';
+import {createClient} from '@/lib/supabase/client';
+import {canSeeFinance} from '@/lib/roles';
+import {today} from '@/lib/date';
+import CoreArtwork from '@/components/CoreArtwork';
+import type {Profile,ProjectView} from '@/lib/types';
+const money=(n:number)=>new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR',maximumFractionDigits:0,notation:n>=10000000?'compact':'standard'}).format(n);
+export default function Dashboard(){const sb=useMemo(()=>createClient(),[]);const [profile,setProfile]=useState<Profile|null>(null),[projects,setProjects]=useState<ProjectView[]>([]),[pid,setPid]=useState('all'),[indents,setIndents]=useState<any[]>([]),[issues,setIssues]=useState<any[]>([]),[work,setWork]=useState<any[]>([]),[boq,setBoq]=useState<any[]>([]),[labour,setLabour]=useState<any[]>([]),[cats,setCats]=useState<any[]>([]),[orders,setOrders]=useState<any[]>([]),[failure,setFailure]=useState(false);
+useEffect(()=>{let mounted=true;async function load(){const {data:{user}}=await sb.auth.getUser();if(!user)return;const r=await Promise.all([sb.from('profiles').select('*').eq('id',user.id).single(),sb.from('projects_view').select('*').order('created_at'),sb.from('indents').select('*').order('created_at',{ascending:false}),sb.from('issues').select('*').order('created_at',{ascending:false}),sb.from('dwr_entries').select('*').order('created_at',{ascending:false}).limit(30),sb.from('boq_items_view').select('*'),sb.from('labour_entries').select('*').eq('date',today()),sb.from('labour_categories_view').select('*'),sb.from('material_orders_view').select('*')]);if(!mounted)return;if(r.some(x=>x.error)){setFailure(true);return}setFailure(false);setProfile(r[0].data);setProjects(r[1].data||[]);setIndents(r[2].data||[]);setIssues(r[3].data||[]);setWork(r[4].data||[]);setBoq(r[5].data||[]);setLabour(r[6].data||[]);setCats(r[7].data||[]);setOrders(r[8].data||[])}load();window.addEventListener('st:refresh',load);return()=>{mounted=false;window.removeEventListener('st:refresh',load)}},[sb]);
+if(failure)return <div className="empty">Could not load your overview. <button className="btn btn-ghost" onClick={()=>window.location.reload()}>Retry</button></div>;
+if(!profile)return <div className="empty">Loading your project overview…</div>;
+const filtered=(rows:any[])=>rows.filter(r=>pid==='all'||r.project_id===pid),ps=projects.filter(p=>pid==='all'||p.id===pid),active=ps.filter(p=>p.status==='Active'),ins=filtered(indents).filter(i=>['Pending Quotation','MD Review'].includes(i.status)),iss=filtered(issues).filter(i=>['Open','In Progress'].includes(i.status)),bs=filtered(boq),ls=filtered(labour),workers=cats.filter(c=>ls.some(l=>l.id===c.labour_entry_id)).reduce((s,c)=>s+Number(c.male_count)+Number(c.female_count),0),ws=filtered(work),pendingDelivery=filtered(orders).filter(o=>o.pending_qty>0),value=bs.reduce((s,b)=>s+Number(b.boq_value||0),0),done=bs.reduce((s,b)=>s+Number(b.done_value||0),0),finance=canSeeFinance(profile.role);
+const hour=Number(new Date().toLocaleString('en-GB',{hour:'2-digit',timeZone:'Asia/Kolkata'}));
+const cards=[{label:'Active projects',value:active.length,icon:IconBuildingSkyscraper,note:`${ps.length} projects in your workspace`,href:'/projects'},{label:'Workforce today',value:workers,icon:IconUsers,note:`${ls.length} attendance ${ls.length===1?'entry':'entries'} recorded`,href:'/labour'},{label:'Pending indents',value:ins.length,icon:IconPackage,note:`${ins.filter(i=>i.status==='MD Review').length} awaiting management review`,href:'/indents'},{label:'Open issues',value:iss.length,icon:IconAlertTriangle,note:`${iss.filter(i=>['Critical','High'].includes(i.priority)).length} high or critical priority`,href:'/issues'}];
+return <><section className="core-dashboard-hero"><div className="core-hero-copy"><div className="core-pill"><span className="core-live-dot"/>SITE OPERATIONS · YOUR DAILY OVERVIEW</div><p className="core-greeting">Good {hour<12?'morning':hour<17?'afternoon':'evening'}, {profile.name.split(' ')[0]}.</p><h1>Your projects.<br/><span>One clear view.</span></h1><p>Everything happening on site.<br/>All the details that move your work forward.</p></div><CoreArtwork compact/></section><div className="core-overview-toolbar"><div><span className="core-section-label">TODAY AT A GLANCE</span><p>Live figures from your recorded site activity</p></div><div className="action-bar"><select aria-label="Filter overview by project" className="input" style={{width:220}} value={pid} onChange={e=>setPid(e.target.value)}><option value="all">All projects</option>{projects.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select>{canAccessPath("/dwr/new",profile.role)&&<Link href="/dwr/new" className="btn btn-acc"><IconPlus size={16}/>Log daily work</Link>}</div></div><div className="stats-grid">{cards.map(c=><Link key={c.label} href={c.href} className="card stat"><div className="stat-top"><span>{c.label}</span><c.icon size={17} stroke={1.5}/></div><div className="stat-value">{String(c.value).padStart(2,'0')}</div><div className="stat-note">{c.note}</div></Link>)}</div><div className="dashboard-columns"><div className="card"><div className="panel-head"><h2>Project progress <span className="tag" style={{marginLeft:8}}>{active.length} active</span></h2><Link href="/projects">All projects <IconArrowUpRight size={12} style={{display:'inline'}}/></Link></div>{active.length?active.map(p=><Link key={p.id} className="project-row" href={`/projects/${p.id}`}><div className="project-title"><div className="project-symbol"><IconBuildingSkyscraper size={23} stroke={1.4}/></div><div><h3>{p.name}</h3><p>{p.location||'Location not set'} · {p.client_name||'Client not set'}</p></div><span className="status-pill">Active</span></div><div className="progress-label"><span>Overall completion</span><b>{Number(p.progress_pct).toFixed(1)}%</b></div><div className="progress-track"><span style={{width:`${Math.min(100,p.progress_pct)}%`}}/></div><div className="project-meta"><span>Target date<b>{p.end_date?new Date(p.end_date+'T12:00:00').toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}):'Not set'}</b></span><span>Pending indents<b>{indents.filter(i=>i.project_id===p.id&&['Pending Quotation','MD Review'].includes(i.status)).length} requests</b></span><span>BOQ items<b>{boq.filter(b=>b.project_id===p.id).length} work items</b></span><IconArrowUpRight size={17} style={{marginLeft:'auto',alignSelf:'center',color:'var(--t3)'}}/></div></Link>):<div className="empty">No active projects. <Link href="/projects" style={{color:'var(--acc)'}}>Create a project →</Link></div>}<div style={{padding:'16px 22px',borderTop:'1px solid var(--br)',fontSize:10,color:'var(--t3)',display:'flex',gap:7,alignItems:'center'}}><IconListNumbers size={13}/>Completion updates automatically from your BOQ quantities.</div></div><div className="card"><div className="panel-head"><h2>Needs attention</h2><span className="tag">{ins.length+iss.length+pendingDelivery.length} items</span></div><Link className="attention-row" href="/indents"><div className="attention-icon"><IconPackage size={17}/></div><div><strong>{ins.length} material indents</strong><small>Review quotations & approvals</small></div><IconChevronRight size={14}/></Link><Link className="attention-row" href="/issues"><div className="attention-icon" style={{color:'var(--rd)'}}><IconAlertTriangle size={17}/></div><div><strong>{iss.length} unresolved issues</strong><small>Keep site work moving</small></div><IconChevronRight size={14}/></Link><Link className="attention-row" href="/orders"><div className="attention-icon" style={{color:'var(--bl)'}}><IconTruck size={17}/></div><div><strong>{pendingDelivery.length} deliveries in progress</strong><small>Track received & pending materials</small></div><IconChevronRight size={14}/></Link><div style={{padding:'17px 22px',fontSize:10,color:'var(--t3)',lineHeight:1.8}}>Your next step starts here.<br/>Open an item to review the details.</div></div></div><div className="dashboard-columns"><div className="card"><div className="panel-head"><h2>Recent site activity</h2><Link href="/dwr">View daily work <IconArrowUpRight size={12} style={{display:'inline'}}/></Link></div>{ws.length?ws.slice(0,4).map(w=><Link className="activity-row" key={w.id} href="/dwr"><span className="activity-dot"/><div style={{flex:1}}><strong>{w.description||'Daily work recorded'}</strong><p>{projects.find(p=>p.id===w.project_id)?.name} · {w.engineer||'Site team'} · {w.date}</p></div><span className="tag" style={{color:w.work_status==='Completed'?'var(--gr)':'var(--acc)'}}>{w.work_status}</span></Link>):<div className="empty">No work reports yet. Record today’s work to start the activity log.</div>}</div><div className="card"><div className="panel-head"><h2>{finance?'BOQ financial summary':'Daily work summary'}</h2><IconClipboardCheck size={16} className="muted"/></div>{finance?<><div className="summary-values"><div><span className="muted" style={{fontSize:10}}>Total BOQ value</span><b>{money(value)}</b></div><div><span className="muted" style={{fontSize:10}}>Completed value</span><b style={{color:'var(--gr)'}}>{money(done)}</b></div></div><div style={{padding:'0 22px 21px'}}><div className="progress-track"><span style={{width:`${value?Math.min(100,done/value*100):0}%`,background:'var(--gr)'}}/></div><div className="muted" style={{fontSize:10,marginTop:10}}>{value?(done/value*100).toFixed(1):0}% of BOQ value completed</div></div></>:<div className="summary-values"><div><span className="muted">Reports recorded</span><b>{ws.length}</b></div><div><span className="muted">Completed work</span><b>{ws.filter(w=>w.work_status==='Completed').length}</b></div></div>}<div className="panel-head" style={{borderTop:'1px solid var(--br)',padding:'15px 22px'}}><h2>Quick actions</h2></div><div className="quick-actions">{canAccessPath("/dpr/new",profile.role)&&<Link href="/dpr/new"><IconPlus size={13}/>Add progress</Link>}{canAccessPath("/indents/new",profile.role)&&<Link href="/indents/new"><IconPackage size={13}/>Material indent</Link>}<Link href="/labour/new"><IconUsers size={13}/>Log labour</Link><Link href="/reports"><IconArrowRight size={13}/>Reports</Link></div></div></div><div className="dash-footer"><span>SiteTrack Pro · Aashish Infra Projects</span><span>All figures reflect recorded site data.</span></div></>}

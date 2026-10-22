@@ -1,4 +1,7 @@
 "use client";
+import { useRouteFilter } from "@/lib/use-route-form";
+import { useRouteForm } from "@/lib/use-route-form";
+import { today } from "@/lib/date";
 import { useEffect, useMemo, useState } from "react";
 import * as XLSX from "xlsx";
 import { createClient } from "@/lib/supabase/client";
@@ -15,13 +18,13 @@ export default function SubconLedgerPage() {
   const supabase = useMemo(() => createClient(), []);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [projects, setProjects] = useState<ProjectView[]>([]);
-  const [selected, setSelected] = useState<string>("all");
+  const [selected, setSelected] = useRouteFilter("project", "all");
   const [rows, setRows] = useState<SubconLedgerEntry[]>([]);
-  const [adding, setAdding] = useState(false);
+  const [adding, setAdding] = useRouteForm("/subcon");
   const [form, setForm] = useState({
     project_id: "",
     subcontractor: "",
-    date: new Date().toISOString().slice(0, 10),
+    date: today(),
     type: "Work Order" as SubconLedgerType,
     description: "",
     wo_po_number: "",
@@ -30,6 +33,8 @@ export default function SubconLedgerPage() {
     amount_paid: "",
     remarks: "",
   });
+
+  useEffect(() => { const refresh = () => { loadRows(); }; window.addEventListener("st:refresh", refresh); return () => window.removeEventListener("st:refresh", refresh); });
 
   async function loadProjects() {
     const { data } = await supabase.from("projects_view").select("*").order("created_at", { ascending: false });

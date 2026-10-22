@@ -1,25 +1,29 @@
 "use client";
+import { useRouteFilter } from "@/lib/use-route-form";
+import { useRouteForm } from "@/lib/use-route-form";
+import ExportButtons from "@/components/ExportButtons";
+import { today } from "@/lib/date";
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { CATEGORY_OF_WORK } from "@/lib/roles";
 import type { BoqItemView, DprEntry, Profile, ProjectView, WorkStatus } from "@/lib/types";
 
 const WORK_STATUSES: WorkStatus[] = ["Completed", "Partial", "Delayed - Carry Forward", "Cancelled", "Not Started"];
-const CAN_ADD_ROLES = ["engineer", "qms", "admin"];
+const CAN_ADD_ROLES = ["engineer", "qms", "md", "admin"];
 
 export default function DprPage() {
   const supabase = useMemo(() => createClient(), []);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [projects, setProjects] = useState<ProjectView[]>([]);
-  const [filterProject, setFilterProject] = useState<string>("all");
-  const [filterDate, setFilterDate] = useState<string>("");
+  const [filterProject, setFilterProject] = useRouteFilter("project", "all");
+  const [filterDate, setFilterDate] = useRouteFilter("date", "");
   const [rows, setRows] = useState<DprEntry[]>([]);
   const [boqItems, setBoqItems] = useState<BoqItemView[]>([]);
-  const [adding, setAdding] = useState(false);
+  const [adding, setAdding] = useRouteForm("/dpr");
   const [form, setForm] = useState({
     project_id: "",
     boq_item_id: "",
-    date: new Date().toISOString().slice(0, 10),
+    date: today(),
     description: "",
     location_block: "",
     category: CATEGORY_OF_WORK[0],
@@ -31,6 +35,8 @@ export default function DprPage() {
     work_status: "Completed" as WorkStatus,
     reason: "",
   });
+
+  useEffect(() => { const refresh = () => { loadRows(); }; window.addEventListener("st:refresh", refresh); return () => window.removeEventListener("st:refresh", refresh); });
 
   async function loadProjects() {
     const { data } = await supabase.from("projects_view").select("*").order("created_at", { ascending: false });
@@ -114,6 +120,7 @@ export default function DprPage() {
             {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
           <input className="input" style={{ width: 150 }} type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} />
+          <ExportButtons title="Daily Progress Report" rows={rows.map(r=>({Date:r.date,Project:projectName(r.project_id),Description:r.description,Location:r.location_block,Category:r.category,'Percent done':r.pct_done,'Quantity done':r.qty_done,Subcontractor:r.subcontractor,Engineer:r.engineer,'Site incharge':r.site_incharge,Status:r.work_status,'Carry forward':r.carry_forward?'Yes':'No',Remarks:r.reason}))}/>
           {canAdd && (
             <button className="btn btn-acc" onClick={() => setAdding(!adding)}>
               <i className="ti ti-plus" /> Add Entry

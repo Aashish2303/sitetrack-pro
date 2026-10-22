@@ -37,6 +37,7 @@ export const NAV_ITEMS: NavItem[] = [
   { id: "vendorledger", href: "/vendorledger", label: "Vendor Ledger", icon: "ti-receipt", roles: ["md", "qms", "accounts", "admin"], group: "Finance & QMS" },
   { id: "vendordb", href: "/vendordb", label: "Vendor Directory", icon: "ti-address-book", roles: ["md", "sales", "admin"], group: "Finance & QMS" },
   { id: "reports", href: "/reports", label: "QMS Reports", icon: "ti-file-report", roles: "all", group: "Finance & QMS" },
+  { id: "admin", href: "/admin", label: "Administration", icon: "ti-shield-lock", roles: ["admin"], group: "Finance & QMS" },
 ];
 
 export function navForRole(role: Role | null | undefined): NavItem[] {
@@ -50,7 +51,7 @@ export const CATEGORY_OF_WORK = [
   "Steel/Reinforcement", "Finishing", "Earthwork", "Other",
 ];
 
-export const UNITS = ["Cum", "Sqm", "Rmt", "MT", "Bag", "Nos", "LS", "Litre", "Kg", "mm", "inches", "feet", "sqft", "Rft", "Ton", "Set", "Pair"];
+export const UNITS = ["Cum", "Sqm", "Rmt", "MT", "Bag", "Nos", "LS", "Litre", "Kg", "mm", "inches", "feet", "sqft", "Rft", "Ton", "Set", "Pair", "Sft", "Cft", "angular"];
 
 export const SIZES = ['1"', '1.5"', '2"', '3"', '4"', '5"', '6"', "8mm", "10mm", "12mm", "16mm", "20mm", "25mm", "32mm", "M6-M16", "Custom"];
 
